@@ -1,0 +1,1 @@
+# you can use this method to create common methods like encoder/decoder
