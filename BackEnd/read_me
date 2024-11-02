@@ -40,3 +40,18 @@
     GITHUB_TOKEN = YOUR PERSONAL ACCESS TOKEN
     GEMINI_API_KEY = YOUR GEMINI KEY # (kindly refer youtube how to create one)
     APP_DATA_JSON_PATH = STATIC APP DATA FILE PATH (not mandatory)
+
+8. Always add newly added packages in requirements.txt file under BackEnd folder.
+
+9. Do not delete or add any branch without (kannan) permission.
+
+10 !!! DO NOT CHECK IN MAIN BRANCH AND DO NOT MERGE or COMMIT IN MAIN WITHOUT (Kannan) Permission.
+
+11. always add clear commit message when you commit something
+
+12. do not commit multiple changes once, always commit when you done with one feature or issue fix so that it will be easy to revert
+
+13. adding new files or changing directory structure requires (kannan) permission
+
+
+
