@@ -35,8 +35,8 @@
 7. Kindly setup your own .env file as per your github_token and gemini api integration and following is the structure
 
     DATABASE_URL= YOUR DB URL       # Example(sqlite:///app.db)
-    LOG_LEVEL=INFO  # options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    LOG_LEVEL=INFO  # options: DEBUG, INFO, WARNING, ERROR, CRITICAL (not mandatory)
     SECRET_KEY= YOUR SECRET KEY
     GITHUB_TOKEN = YOUR PERSONAL ACCESS TOKEN
     GEMINI_API_KEY = YOUR GEMINI KEY # (kindly refer youtube how to create one)
-
+    APP_DATA_JSON_PATH = STATIC APP DATA FILE PATH (not mandatory)
