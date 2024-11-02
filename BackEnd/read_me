@@ -1,0 +1,13 @@
+
+# initialize data base
+
+flask db init
+
+# database migration (when you make any changes to the models files just run the following commands without reinitializing the database)
+
+flask db migrate -m " your migration message. "
+flask db upgrade
+
+
+# run the app
+python run.py
