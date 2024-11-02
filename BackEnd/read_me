@@ -22,11 +22,16 @@
 # IMPORTANT RULES FOR DEVELOPER
 
 1. Make sure you dont include venv, migrations, instance, logs folders and .env file when you commit due to security reasons
+
 2. Add your routes in app/routes/api_routes.py (please dont write entire logic inside api_routes.py)
+
 3. To write Business/app logic use services/logic.py
+
 4. To write utilites functions like any functions that dont have our business logics should be written inside utils/helpers.py
+
 5. When writing data to DB or sending responses kindly serialise/de-serialise the data using marshmellow if you don't know about marshmellow
    kindly learn about it from youtube :)
+
 6. Kindly log every actions in INFO, an example logging is the following
 
     # from flask import current_app
