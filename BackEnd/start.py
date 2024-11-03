@@ -8,7 +8,7 @@ def start_flask():
 
 
 def start_celery_worker():
-    subprocess.Popen([sys.executable, "-m", "celery", "-A", "app.jobs.worker.celery", "worker", "--loglevel=info"])
+    subprocess.Popen([sys.executable, "-m", "celery", "-A", "app.jobs.worker.celery", "worker", "--loglevel=info","--pool=solo"])
 
 
 def start_celery_beat():

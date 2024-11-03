@@ -55,7 +55,7 @@ class Config:
                     broker_url=os.getenv("REDIS_URL","redis://localhost:6379/0"),
                     result_backend=os.getenv("REDIS_URL","redis://localhost:6379/0"),
                     task_ignore_result=True,
-                    # celerybeat_schedules = {
+                    # beat_schedule = {
                     #     'test-10-seconds-task':
                     #     {
                     #         'task': 'app.jobs.jobs.simpleTask',
