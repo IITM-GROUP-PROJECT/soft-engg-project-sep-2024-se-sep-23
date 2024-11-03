@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from .extensions import db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class Project(db.Model):
     __tablename__ = 'projects'
@@ -42,6 +43,26 @@ class User(db.Model):
 
     user_repositories = db.relationship("RepoVsUser", backref="user", lazy=True)
     user_milestones = db.relationship("UserVsMilestone", backref="user", lazy=True)
+
+    @property
+    def password(self):
+        raise AttributeError("Password is not readable")
+
+    @password.setter
+    def password(self, plaintext_password):
+        self._password = generate_password_hash(plaintext_password)
+
+    def verify_password(self, password):
+        return check_password_hash(self._password, password)
+
+    def is_admin(self):
+        return self.role == 0
+
+    def is_instructor(self):
+        return self.role == 1
+
+    def is_student(self):
+        return self.role == 2
 
 
 class Repository(db.Model):
