@@ -3,7 +3,7 @@ import logging
 from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
-
+from celery.schedules import crontab
 
 
 load_dotenv()
@@ -45,3 +45,26 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL","sqlite:///app.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.getenv("SECRET_KEY","SAF1AFDGGWE231A1AVPPROTJQMVRRW0PS76GH3PPTW1WAFN2GWQMVLTY041")
+
+    # celery configurations
+    # CELERY_BROKER_URL = os.getenv("REDIS_URL","redis://localhost:6379/0")
+    # CELERY_RESULT_BACKEND = os.getenv("REDIS_URL","redis://localhost:6379/0")
+
+
+    CELERY = dict(
+                    broker_url=os.getenv("REDIS_URL","redis://localhost:6379/0"),
+                    result_backend=os.getenv("REDIS_URL","redis://localhost:6379/0"),
+                    task_ignore_result=True,
+                    # celerybeat_schedules = {
+                    #     'test-10-seconds-task':
+                    #     {
+                    #         'task': 'app.jobs.jobs.simpleTask',
+                    #          'schedule': 10.0,  # every 10 seconds
+                    #     },
+                    #    'test-midnight-task':
+                    #     {
+                    #         'task': 'app.jobs.jobs.simpleTask',
+                    #         'schedule': crontab(hour=0, minute=0),  # every midnight
+                    #     },
+                    # }
+                )

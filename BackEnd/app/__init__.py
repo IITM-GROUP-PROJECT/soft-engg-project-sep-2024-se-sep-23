@@ -1,10 +1,11 @@
 #app configureation and initialization
 
 from flask import Flask
-from .extensions import db, migrate
+from .extensions import db, migrate, make_celery
 from config import Config
 from .routes.api_routes import api_routes
 from config import setup_logging
+
 
 def create_app():
     app = Flask(__name__)
@@ -15,5 +16,6 @@ def create_app():
     migrate.init_app(app, db)
 
     app.register_blueprint(api_routes)
+    celery = make_celery(app)
+    return app, celery
 
-    return app
