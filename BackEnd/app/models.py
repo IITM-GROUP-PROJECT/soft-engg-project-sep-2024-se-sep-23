@@ -107,6 +107,7 @@ class UserVsMilestone(db.Model):
 
 class Integration(db.Model):
     __tablename__ = 'integration'
-    integration_id = db.Column(db.Integer, primary_key=True, autoincrement=True, unique=True)
+    integration_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
     name = db.Column(db.String(150), nullable=False)
     details = db.Column(db.Text, nullable=False)

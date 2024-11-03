@@ -17,5 +17,7 @@ def create_app():
 
     app.register_blueprint(api_routes)
     celery = make_celery(app)
-    return app, celery
 
+    app.extensions['celery'] = celery
+
+    return app
