@@ -36,7 +36,6 @@ def signup():
         role=1
     )
     new_user.plain_password = password
-    print(new_user.password)
 
     db.session.add(new_user)
     db.session.commit()
