@@ -6,6 +6,7 @@ from config import Config
 from .routes.api_routes import api_routes
 from config import setup_logging
 
+from flask_jwt_extended import JWTManager
 
 def create_app():
     app = Flask(__name__)
@@ -19,5 +20,9 @@ def create_app():
     celery = make_celery(app)
 
     app.extensions['celery'] = celery
+
+    # Initialize JWT
+    app.config['JWT_SECRET_KEY'] = 'abcd_jwt_secret_key'
+    jwt = JWTManager(app)
 
     return app
