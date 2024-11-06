@@ -1,0 +1,126 @@
+openapi: 3.0.0
+info:
+  title: Project Management API
+  version: 1.0.0
+  description: API for Project Management Platform. 
+
+servers:
+  - url: http://127.0.0.1:5000
+
+paths:
+  /signup:
+    post:
+      summary: Signup a new instructor user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                student_email:
+                  type: string
+                  format: email
+                  example: instructor@example.com
+                github_username:
+                  type: string
+                  example: instructor_github
+                password:
+                  type: string
+                  format: password
+                  example: securepassword
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: User created successfully
+        '400':
+          description: User already exists or invalid role
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: User already exists
+
+  /login:
+    post:
+      summary: Login a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                student_email:
+                  type: string
+                  format: email
+                  example: instructor@example.com
+                password:
+                  type: string
+                  format: password
+                  example: securepassword
+      responses:
+        '200':
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  role:
+                    type: integer
+                    example: 1
+        '401':
+          description: Bad email or password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Bad email or password
+
+  /protected:
+    get:
+      summary: Access protected route
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Protected route accessed successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                example: instructor@example.com
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Missing Authorization Header
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -38,22 +38,23 @@ class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True, unique=True)
     student_email = db.Column(db.String(269), nullable=False)
     github_username = db.Column(db.String(150), nullable=False)
-    password = db.Column(db.String(150), nullable=False)
+    password = db.Column(db.String(150), nullable=False) 
     role = db.Column(db.Integer, default=2, nullable=False)
 
     user_repositories = db.relationship("RepoVsUser", backref="user", lazy=True)
     user_milestones = db.relationship("UserVsMilestone", backref="user", lazy=True)
 
     @property
-    def password(self):
+    def plain_password(self):
+        # changed password to plain_password to avoid infinite recursion error because the setter method for password tries to set self.password to the hashed password, which keeps calling the setter itself.
         raise AttributeError("Password is not readable")
 
-    @password.setter
-    def password(self, plaintext_password):
-        self._password = generate_password_hash(plaintext_password)
+    @plain_password.setter
+    def plain_password(self, plaintext_password):
+        self.password = generate_password_hash(plaintext_password)
 
     def verify_password(self, password):
-        return check_password_hash(self._password, password)
+        return check_password_hash(self.password, password)
 
     def is_admin(self):
         return self.role == 0
