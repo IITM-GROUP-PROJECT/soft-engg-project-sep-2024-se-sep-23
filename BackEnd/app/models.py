@@ -112,3 +112,13 @@ class Integration(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False)
     name = db.Column(db.String(150), nullable=False)
     details = db.Column(db.Text, nullable=False)
+
+class Courses(db.Model):
+    __tablename__ = 'courses'
+    course_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    course_name = db.Column(db.String(150), nullable=False)
+
+class CoursesVsProjects(db.Model):
+    course_project_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.project_id"), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey("courses.course_id"), nullable=False)

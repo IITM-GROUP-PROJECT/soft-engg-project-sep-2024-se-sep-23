@@ -2,15 +2,16 @@
 
 from flask import Flask
 from .extensions import db, migrate, make_celery
+from flask_cors import CORS
 from config import Config
 from .routes.api_routes import api_routes
 from config import setup_logging
-
 from flask_jwt_extended import JWTManager
+
 
 def create_app():
     app = Flask(__name__)
-
+    CORS(app)
     setup_logging(app)
     app.config.from_object(Config)
     db.init_app(app)
@@ -22,7 +23,6 @@ def create_app():
     app.extensions['celery'] = celery
 
     # Initialize JWT
-    app.config['JWT_SECRET_KEY'] = 'abcd_jwt_secret_key'
     jwt = JWTManager(app)
 
     return app
