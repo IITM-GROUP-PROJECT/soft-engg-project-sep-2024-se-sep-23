@@ -1,0 +1,543 @@
+<template>
+  <div class="project-info">
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="navbar-left">
+                <button @click="goBack" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                Back
+                </button>
+                <div class="navbar-brand">
+                <img src="/iitm.png" alt="IITM Logo" class="navbar-logo" />
+                <span>{{ project.title }}</span>
+                </div>
+            </div>
+            <button @click="logout" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </button>
+            </div>
+    </nav>
+
+    <div class="container">
+      <div class="project-header">
+        <h2>{{ project.title }}</h2>
+        <div class="project-description">{{ project.problem }}</div>
+      </div>
+
+      <div class="content-grid">
+        <div class="main-content">
+          <div class="section-header">
+            <h3><i class="fas fa-tasks"></i> Milestones</h3>
+          </div>
+          <div class="milestones-container">
+            <div v-for="milestone in project.milestones" 
+                 :key="milestone.id" 
+                 class="milestone-card"
+                 :class="{ 'completed': milestone.status === 'Completed' }">
+              <div class="milestone-status">
+                <span :class="['status-badge', milestone.status.toLowerCase()]">
+                  {{ milestone.status }}
+                </span>
+              </div>
+              <div class="milestone-content">
+                <p class="milestone-description">{{ milestone.text }}</p>
+                <p class="milestone-deadline">
+                  <i class="far fa-calendar-alt"></i>
+                  Due: {{ milestone.deadline }}
+                </p>
+              </div>
+              <button v-if="milestone.status === 'Pending'" 
+                      @click="markAsCompleted(milestone.id)" 
+                      class="complete-btn">
+                <i class="fas fa-check"></i>
+                Mark Complete
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="side-content">
+          <div class="project-form">
+            <div class="section-header">
+              <h3><i class="fab fa-github"></i> Project Resources</h3>
+            </div>
+            
+            <div class="form-group">
+                <label for="github_repo_url">GitHub Repository URL</label>
+                <div class="input-group">
+                    <i class="fab fa-github"></i>
+                    <a 
+                    :href="project.github_repo_url"
+                    class="repo-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >
+                    {{ project.github_repo_url }}
+                    </a>
+                </div>
+            </div>
+
+            <div class="form-group">
+              <label for="project_report">Project Report</label>
+              <textarea 
+                v-model="project.project_report" 
+                class="form-control" 
+                id="project_report"
+                rows="6"
+                placeholder="Write your project report..."
+              ></textarea>
+            </div>
+
+            <button @click="saveChanges" class="save-btn">
+              <i class="fas fa-save"></i>
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.project-info {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.navbar {
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 0.75rem 1.5rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+.navbar-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #791912;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.navbar-logo {
+  height: 40px;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: #791912;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background-color: #791912;
+  color: white;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: #791912;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: #791912;
+  color: white;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 6rem auto 2rem;
+  padding: 0 1.5rem;
+}
+
+.project-header {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.project-header h2 {
+  color: #791912;
+  margin-bottom: 1rem;
+}
+
+.project-description {
+  color: #666;
+  line-height: 1.6;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 2rem;
+}
+
+.section-header {
+  margin-bottom: 1.5rem;
+}
+
+.section-header h3 {
+  color: #791912;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.milestone-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+}
+
+.milestone-card:hover {
+  transform: translateY(-2px);
+}
+
+.milestone-card.completed {
+  border-left: 4px solid #28a745;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-badge.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.milestone-content {
+  margin: 1rem 0;
+}
+
+.milestone-description {
+  color: #444;
+  margin-bottom: 0.5rem;
+}
+
+.milestone-deadline {
+  color: #666;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.complete-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.3s ease;
+}
+
+.complete-btn:hover {
+  background-color: #218838;
+}
+
+.repo-link {
+  color: #0366d6;
+  text-decoration: none;
+  padding: 0.75rem 2.5rem;
+  display: block;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  word-break: break-all;
+}
+
+.repo-link:hover {
+  text-decoration: underline;
+  color: #0366d6;
+}
+
+.project-form {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #444;
+  font-weight: 500;
+}
+
+.input-group {
+  position: relative;
+}
+
+.input-group i {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  transition: border-color 0.3s ease;
+}
+
+.input-group .form-control {
+  padding-left: 2.5rem;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #791912;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.save-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #d7a84e;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background-color 0.3s ease;
+}
+
+.save-btn:hover {
+  background-color: #c29843;
+}
+
+/* Adjust for larger screens */
+@media (min-width: 1200px) {
+  .content-grid {
+    /* Increase the width of both columns on large screens */
+    grid-template-columns: 3fr 1.5fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .navbar-content {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .container {
+    margin-top: 8rem;
+  }
+}
+</style>
+<script>
+export default {
+  name: 'ProjectInfo',
+  data() {
+    return {
+      project: {
+        title: '',
+        problem: '',
+        milestones: [],
+        github_repo_url: '',
+        project_report: ''
+      }
+    };
+  },
+  methods: {
+    async fetchProjectInfo() {
+      try {
+        const response = await fetch(`http://127.0.0.1:5000/api/project_info/${this.$route.params.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        console.log(data);
+        this.project = data;
+      } catch (error) {
+        console.error('Error fetching project info:', error);
+      }
+    },
+    markAsCompleted(milestoneId) {
+      const milestone = this.project.milestones.find(m => m.id === milestoneId);
+      if (milestone) {
+        milestone.status = 'Completed';
+      }
+    },
+    async saveChanges() {
+      try {
+        const projectId = this.$route.params.id;
+        const response = await fetch(`http://127.0.0.1:5000/api/project_info/${projectId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(this.project)
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        alert(data.msg);
+      } catch (error) {
+        console.error('Error saving project info:', error);
+      }
+    },
+    logout() {
+      localStorage.removeItem('token');
+      this.$router.push('/');
+    }, goBack() {
+    this.$router.push('/student_dashboard');
+  }
+  },
+  created() {
+    this.fetchProjectInfo();
+  }
+};
+</script>
+
+<style scoped>
+.project-info .navbar {
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.project-info .navbar-brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.project-info .container {
+  max-width: 2000px;
+  margin: 0 auto;
+}
+
+.project-info h2 {
+  margin-bottom: 1rem;
+  color: #2c3e50;
+}
+
+.project-info h3 {
+  margin-top: 2rem;
+  color: #2c3e50;
+}
+
+.project-info .milestone {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.project-info .btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.project-info .btn-primary:hover {
+  background-color: #0056b3;
+  border-color: #004085;
+}
+
+.project-info .btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.project-info .btn-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+.project-info .btn-danger {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.project-info .btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+</style>
