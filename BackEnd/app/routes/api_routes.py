@@ -95,6 +95,7 @@ def get_students():
     } for student in students]), 200
 
 import requests
+import uuid
 
 # API to create a new Project
 @api_routes.route('/api/create_project', methods=['POST'])
@@ -139,7 +140,9 @@ def create_project():
             continue  # Skip if student or GitHub username is missing
         
         # Repository name format
-        repo_name = f"{project.id}-{student_id}"
+        # Generate a unique repository name using a UUID
+        unique_id = uuid.uuid4().hex[:6]
+        repo_name = f"{project.title}-{student_id}-{unique_id}"
 
         # GitHub Repository creation payload
         repo_payload = {
@@ -309,9 +312,21 @@ def delete_project(project_id):
     if not project:
         return jsonify({"msg": "Project not found"}), 404
 
-    db.session.delete(project)
-    db.session.commit()
-    return jsonify({"msg": "Project deleted successfully"}), 200
+    try:
+        # Delete StudentMilestone records
+        StudentMilestone.query.filter_by(project_id=project_id).delete()
+        
+        # Delete StudentProject records
+        StudentProject.query.filter_by(project_id=project_id).delete()
+        
+        # Delete project (milestones will be deleted by cascade)
+        db.session.delete(project)
+        db.session.commit()
+        return jsonify({"msg": "Project deleted successfully"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": f"Error deleting project: {str(e)}"}), 500
 
 # NEED to work on Updating an existing project
 
