@@ -142,7 +142,8 @@ def create_project():
         # Repository name format
         # Generate a unique repository name using a UUID
         unique_id = uuid.uuid4().hex[:6]
-        repo_name = f"{project.title}-{student_id}-{unique_id}"
+        repo_name = f"{project.title.replace(' ', '_')}-{student_id}-{unique_id}"
+        print(repo_name)
 
         # GitHub Repository creation payload
         repo_payload = {
@@ -163,6 +164,7 @@ def create_project():
             repo_data = response.json()
             github_repo_url = f"https://github.com/{repo_data['full_name']}"
         except requests.RequestException as e:
+            print(e)
             db.session.rollback()
             return jsonify({"error": "Failed to create GitHub repository", "details": str(e)}), 500
 
@@ -183,6 +185,7 @@ def create_project():
             collaborator_response = requests.put(collaborator_url, json=collaborator_payload, headers=headers)
             collaborator_response.raise_for_status()
         except requests.RequestException as e:
+            print(e)
             db.session.rollback()
             return jsonify({"error": "Failed to add collaborator", "details": str(e)}), 500
 
