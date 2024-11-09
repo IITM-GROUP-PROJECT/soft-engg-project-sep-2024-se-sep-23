@@ -57,6 +57,52 @@
   </div>
 </template>
 
+
+<script>
+export default {
+  name: 'InstructorDashboard',
+  data() {
+    return {
+      projects: [], 
+      loading: true
+    };
+  },
+  methods: {
+    async fetchProjects() {
+      this.loading = true;
+      try {
+        const response = await fetch('http://127.0.0.1:5000/api/instructor_dashboard', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        this.projects = await response.json();
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    viewDetails(projectId) {
+      this.$router.push(`/project/${projectId}`);
+    },
+    createProject() {
+      this.$router.push('/create_project');
+    },
+    logout() {
+      localStorage.removeItem('token');
+      this.$router.push('/');
+    }
+  },
+  created() {
+    this.fetchProjects();
+  }
+};
+</script>
+
 <style scoped>
 .instructor-dashboard {
   min-height: 100vh;
@@ -244,48 +290,3 @@
   }
 }
 </style>
-
-<script>
-export default {
-  name: 'InstructorDashboard',
-  data() {
-    return {
-      projects: [], 
-      loading: true
-    };
-  },
-  methods: {
-    async fetchProjects() {
-      this.loading = true;
-      try {
-        const response = await fetch('http://127.0.0.1:5000/api/instructor_dashboard', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        this.projects = await response.json();
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      } finally {
-        this.loading = false;
-      }
-    },
-    viewDetails(projectId) {
-      this.$router.push(`/project/${projectId}`);
-    },
-    createProject() {
-      this.$router.push('/create_project');
-    },
-    logout() {
-      localStorage.removeItem('token');
-      this.$router.push('/');
-    }
-  },
-  created() {
-    this.fetchProjects();
-  }
-};
-</script>

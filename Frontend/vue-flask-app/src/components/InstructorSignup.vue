@@ -75,6 +75,7 @@ export default {
         if (data.access_token) {
           localStorage.setItem('token', data.access_token);
           alert('Signup successful');
+          this.$router.push('/instructor_dashboard');
         } else {
           alert('Signup failed');
         }

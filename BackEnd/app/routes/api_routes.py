@@ -328,8 +328,75 @@ def delete_project(project_id):
         db.session.rollback()
         return jsonify({"msg": f"Error deleting project: {str(e)}"}), 500
 
-# NEED to work on Updating an existing project
+# Update an existing project
+@api_routes.route('/api/update_project/<int:project_id>', methods=['PUT'])
+@jwt_required()
+def update_project(project_id):
+    email = get_jwt_identity()
+    instructor = Instructor.query.filter_by(email=email).first()
+    project = Project.query.filter_by(id=project_id, instructor_id=instructor.id).first()
+    
+    if not project:
+        return jsonify({"msg": "Project not found"}), 404
 
+    try:
+        data = request.get_json()
+        
+        # Update project details
+        if 'title' in data:
+            project.title = data['title']
+        if 'problem' in data:
+            project.problem = data['problem']
+            
+        # Handle milestones
+        if 'milestones' in data:
+            # Delete removed milestones
+            existing_milestone_ids = {m.id for m in project.milestones}
+            updated_milestone_ids = {m.get('id') for m in data['milestones'] if m.get('id')}
+            for milestone_id in existing_milestone_ids - updated_milestone_ids:
+                milestone = Milestone.query.get(milestone_id)
+                if milestone:
+                    # Delete related student milestones first
+                    StudentMilestone.query.filter_by(milestone_id=milestone_id).delete()
+                    db.session.delete(milestone)
+            
+            # Update or add milestones
+            for milestone_data in data['milestones']:
+                if milestone_id := milestone_data.get('id'):
+                    # Update existing milestone
+                    milestone = Milestone.query.get(milestone_id)
+                    if milestone and milestone.project_id == project_id:
+                        milestone.text = milestone_data['text']
+                        milestone.deadline = datetime.fromisoformat(milestone_data['deadline'])
+                else:
+                    # Add new milestone
+                    new_milestone = Milestone(
+                        text=milestone_data['text'],
+                        deadline=datetime.fromisoformat(milestone_data['deadline']),
+                        project_id=project_id
+                    )
+                    db.session.add(new_milestone)
+        
+        db.session.commit()
+        
+        # Return updated project data
+        return jsonify({
+            "msg": "Project updated successfully",
+            "project": {
+                "id": project.id,
+                "title": project.title,
+                "problem": project.problem,
+                "milestones": [{
+                    "id": m.id,
+                    "text": m.text,
+                    "deadline": m.deadline.isoformat()
+                } for m in project.milestones]
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": f"Error updating project: {str(e)}"}), 500
 
 # API to get information about a student's progress on a project
 @api_routes.route('/api/track_progress/<int:project_id>/<int:student_id>', methods=['GET'])

@@ -14,7 +14,6 @@ def create_app():
     setup_logging(app)
     app.config.from_object(Config)
     
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.sqlite3"
     db.init_app(app)
     migrate.init_app(app, db)
 

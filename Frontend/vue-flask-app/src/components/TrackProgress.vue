@@ -103,6 +103,100 @@
   </div>
 </template>
 
+
+
+<script>
+import GitHubCommitHistory from './GitHubCommitHistory.vue';
+import { marked } from 'marked';
+
+export default {
+  name: 'TrackProgress',
+  components: {
+    GitHubCommitHistory
+  },
+  data() {
+    return {
+      project: {
+        title: '',
+        problem: '',
+        milestones: [],
+        github_repo_url: '',
+        project_report: ''
+      },
+      aiEvaluation: null,
+      isEvaluating: false,
+      evaluationError: null
+    };
+  },
+  methods: {
+    async fetchProgress() {
+      try {
+        const response = await fetch(`http://127.0.0.1:5000/api/track_progress/${this.$route.params.projectId}/${this.$route.params.studentId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        this.project = data;
+      } catch (error) {
+        console.error('Error fetching progress:', error);
+      }
+    },
+    
+    async getAIEvaluation() {
+      this.isEvaluating = true;
+      this.evaluationError = null;
+      
+      try {
+        const response = await fetch('http://127.0.0.1:5000/api/ai_eval', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            report: this.project.project_report,
+            projectId: this.$route.params.projectId
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to get AI evaluation');
+        }
+        
+        const data = await response.json();
+        this.aiEvaluation = data.evaluation;
+      } catch (error) {
+        console.error('Error getting AI evaluation:', error);
+        this.evaluationError = 'Failed to get AI evaluation. Please try again later.';
+      } finally {
+        this.isEvaluating = false;
+      }
+    },
+    
+    logout() {
+      localStorage.removeItem('token');
+      this.$router.push('/');
+    },
+    goBack() {
+      // Navigate back to project details page using project ID from route params
+      this.$router.push(`/project/${this.$route.params.projectId}`);
+    },
+  },
+  created() {
+    this.fetchProgress();
+  },
+  computed: {
+    renderedEvaluation() {
+      return this.aiEvaluation ? marked(this.aiEvaluation) : '';
+    }
+  }
+};
+</script>
+
 <style scoped>
 .track-progress {
   min-height: 100vh;
@@ -432,95 +526,3 @@ h3 {
   }
 }
 </style>
-
-<script>
-import GitHubCommitHistory from './GitHubCommitHistory.vue';
-import { marked } from 'marked';
-
-export default {
-  name: 'TrackProgress',
-  components: {
-    GitHubCommitHistory
-  },
-  data() {
-    return {
-      project: {
-        title: '',
-        problem: '',
-        milestones: [],
-        github_repo_url: '',
-        project_report: ''
-      },
-      aiEvaluation: null,
-      isEvaluating: false,
-      evaluationError: null
-    };
-  },
-  methods: {
-    async fetchProgress() {
-      try {
-        const response = await fetch(`http://127.0.0.1:5000/api/track_progress/${this.$route.params.projectId}/${this.$route.params.studentId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        this.project = data;
-      } catch (error) {
-        console.error('Error fetching progress:', error);
-      }
-    },
-    
-    async getAIEvaluation() {
-      this.isEvaluating = true;
-      this.evaluationError = null;
-      
-      try {
-        const response = await fetch('http://127.0.0.1:5000/api/ai_eval', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
-            report: this.project.project_report,
-            projectId: this.$route.params.projectId
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to get AI evaluation');
-        }
-        
-        const data = await response.json();
-        this.aiEvaluation = data.evaluation;
-      } catch (error) {
-        console.error('Error getting AI evaluation:', error);
-        this.evaluationError = 'Failed to get AI evaluation. Please try again later.';
-      } finally {
-        this.isEvaluating = false;
-      }
-    },
-    
-    logout() {
-      localStorage.removeItem('token');
-      this.$router.push('/');
-    },
-    goBack() {
-      // Navigate back to project details page using project ID from route params
-      this.$router.push(`/project/${this.$route.params.projectId}`);
-    },
-  },
-  created() {
-    this.fetchProgress();
-  },
-  computed: {
-    renderedEvaluation() {
-      return this.aiEvaluation ? marked(this.aiEvaluation) : '';
-    }
-  }
-};
-</script>

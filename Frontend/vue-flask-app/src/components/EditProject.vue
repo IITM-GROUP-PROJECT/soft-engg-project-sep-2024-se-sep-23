@@ -1,47 +1,35 @@
 <template>
-  <div class="create-project">
+  <div class="edit-project">
     <nav class="navbar">
       <div class="navbar-content">
         <div class="navbar-brand">
           <img src="/iitm.png" alt="IITM Logo" class="navbar-logo" />
-          <span>Create New Project</span>
+          <span>Edit Project</span>
         </div>
-        <button @click="logout" class="logout-btn">
-          <i class="fas fa-sign-out-alt"></i>
-          Logout
+        <button @click="goBack" class="back-btn">
+          <i class="fas fa-arrow-left"></i>
+          Back
         </button>
       </div>
     </nav>
 
     <div class="container">
-      <div class="form-card">
-        <form @submit.prevent="createProject">
+      <div v-if="loading" class="loading-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Loading project...</p>
+      </div>
+
+      <div v-else class="form-card">
+        <form @submit.prevent="updateProject">
           <div class="form-section">
             <h3>Project Details</h3>
             <div class="form-group">
-              <label for="title">Project Title</label>
-              <input type="text" v-model="title" id="title" required>
+              <label>Project Title</label>
+              <input type="text" v-model="project.title" required>
             </div>
             <div class="form-group">
-              <label for="problem">Project Problem Statement</label>
-              <textarea v-model="problem" id="problem" rows="4" required></textarea>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3>Student Assignment</h3>
-            <div class="form-group">
-              <label for="students">Select Students</label>
-              <div class="select-wrapper">
-                <select v-model="selectedStudents" id="students" multiple>
-                  <option v-for="student in students" :key="student.id" :value="student.id">
-                    {{ student.email }}
-                  </option>
-                </select>
-              </div>
-              <button type="button" @click="selectAllStudents" class="secondary-btn">
-                <i class="fas fa-users"></i> Select All Students
-              </button>
+              <label>Problem Statement</label>
+              <textarea v-model="project.problem" rows="4" required></textarea>
             </div>
           </div>
 
@@ -53,13 +41,28 @@
               </button>
             </div>
             <div class="milestones-container">
-              <div v-for="(milestone, index) in milestones" :key="index" class="milestone-card">
+              <div v-for="(milestone, index) in project.milestones" 
+                   :key="milestone.id || index" 
+                   class="milestone-card">
                 <div class="milestone-number">#{{ index + 1 }}</div>
                 <div class="milestone-inputs">
-                  <input type="text" v-model="milestone.text" placeholder="Milestone Description" required>
-                  <input type="date" v-model="milestone.deadline" required>
+                  <input 
+                    type="text" 
+                    v-model="milestone.text"
+                    placeholder="Milestone Description"
+                    required
+                  >
+                  <input 
+                    type="date" 
+                    v-model="milestone.deadline"
+                    required
+                  >
                 </div>
-                <button type="button" @click="removeMilestone(index)" class="remove-btn">
+                <button 
+                  type="button"
+                  @click="removeMilestone(index)" 
+                  class="remove-btn"
+                >
                   <i class="fas fa-trash"></i>
                 </button>
               </div>
@@ -68,7 +71,7 @@
 
           <div class="form-actions">
             <button type="submit" class="submit-btn">
-              <i class="fas fa-check"></i> Create Project
+              <i class="fas fa-save"></i> Save Changes
             </button>
           </div>
         </form>
@@ -80,80 +83,83 @@
 
 <script>
 export default {
-  name: 'CreateProject',
+  name: 'EditProject',
   data() {
     return {
-      title: '',
-      problem: '',
-      students: [],
-      selectedStudents: [],
-      milestones: [{ text: '', deadline: '' }]
-    };
+      project: {
+        title: '',
+        problem: '',
+        milestones: []
+      },
+      loading: true
+    }
   },
   methods: {
-    async fetchStudents() {
-      try {
-        const response = await fetch('http://127.0.0.1:5000/api/students', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
+    goBack() {
+      this.$router.push(`/project/${this.$route.params.projectId}`);
+    },
+    async fetchProjectDetails() {
+    try {
+      const response = await fetch(`http://127.0.0.1:5000/api/project_details/${this.$route.params.projectId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-        const data = await response.json();
-        this.students = data;
-      } catch (error) {
-        console.error('Error fetching students:', error);
-      }
+      });
+      if (!response.ok) throw new Error('Failed to fetch project');
+      const data = await response.json();
+      this.project = {
+        ...data,
+        milestones: data.milestones.map(m => ({
+          ...m,
+          deadline: new Date(m.deadline).toISOString().split('T')[0] // Convert to YYYY-MM-DD
+        }))
+      };
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to load project details');
+    } finally {
+      this.loading = false;
+    }
     },
     addMilestone() {
-      this.milestones.push({ text: '', deadline: '' });
-    },
+    this.project.milestones.push({
+      text: '',
+      deadline: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD
+    });
+  },
     removeMilestone(index) {
-      this.milestones.splice(index, 1);
+      this.project.milestones.splice(index, 1);
     },
-    selectAllStudents() {
-      this.selectedStudents = this.students.map(student => student.id);
-    },
-    async createProject() {
+    async updateProject() {
       try {
-        const response = await fetch('http://127.0.0.1:5000/api/create_project', {
-          method: 'POST',
+        const response = await fetch(`http://127.0.0.1:5000/api/update_project/${this.$route.params.projectId}`, {
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
-          body: JSON.stringify({
-            title: this.title,
-            problem: this.problem,
-            student_ids: this.selectedStudents,
-            milestones: this.milestones
-          })
+          body: JSON.stringify(this.project)
         });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        alert(data.msg);
-        this.$router.push('/instructor_dashboard');
+        
+        if (!response.ok) throw new Error('Failed to update project');
+        
+        alert('Project updated successfully');
+        this.$router.push(`/project/${this.$route.params.projectId}`);
       } catch (error) {
-        console.error('Error creating project:', error);
+        console.error('Error:', error);
+        alert('Failed to update project');
       }
-    },
-    logout() {
-      localStorage.removeItem('token');
-      this.$router.push('/');
     }
   },
   created() {
-    this.fetchStudents();
+    this.fetchProjectDetails();
   }
-};
+}
 </script>
 
+
 <style scoped>
-.create-project {
+.edit-project {
   min-height: 100vh;
   background-color: #f8f9fa;
 }
@@ -226,7 +232,7 @@ label {
   font-weight: 500;
 }
 
-input, textarea, select {
+input, textarea {
   width: 100%;
   padding: 0.75rem;
   border: 2px solid #eee;
@@ -234,13 +240,9 @@ input, textarea, select {
   transition: all 0.3s ease;
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus, textarea:focus {
   outline: none;
   border-color: #791912;
-}
-
-select[multiple] {
-  height: 200px;
 }
 
 .milestone-header {
@@ -271,41 +273,34 @@ select[multiple] {
   gap: 0.5rem;
 }
 
-.logout-btn, .secondary-btn, .add-milestone-btn, .remove-btn, .submit-btn {
+.back-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-btn {
   background: transparent;
   border: 1px solid #791912;
   color: #791912;
+  transition: all 0.3s ease;
 }
 
-.logout-btn:hover {
+.back-btn:hover {
   background: #791912;
   color: white;
-}
-
-.secondary-btn {
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  color: #666;
-}
-
-.secondary-btn:hover {
-  background: #eee;
 }
 
 .add-milestone-btn {
   background: #d7a84e;
   border: none;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .add-milestone-btn:hover {
@@ -317,6 +312,7 @@ select[multiple] {
   border: none;
   color: #dc3545;
   padding: 0.5rem;
+  cursor: pointer;
 }
 
 .remove-btn:hover {
@@ -330,6 +326,12 @@ select[multiple] {
   color: white;
   font-weight: 500;
   padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .submit-btn:hover {

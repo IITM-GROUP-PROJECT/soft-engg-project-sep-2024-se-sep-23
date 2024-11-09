@@ -90,6 +90,81 @@
   </div>
 </template>
 
+
+<script>
+export default {
+  name: 'ProjectDetails',
+  data() {
+    return {
+      project: {
+        title: '',
+        problem: '',
+        milestones: [],
+        students: []
+      },
+      loading: true
+    };
+  },
+  methods: {
+    goBack() {
+      this.$router.push('/instructor_dashboard');
+    },
+    async fetchProjectDetails() {
+      this.loading = true;
+      try {
+        const response = await fetch(`http://127.0.0.1:5000/api/project_details/${this.$route.params.projectId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        this.project = data;
+      } catch (error) {
+        console.error('Error fetching project details:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    editProject() {
+      this.$router.push(`/edit_project/${this.$route.params.projectId}`);
+    },
+    async deleteProject() {
+      if (confirm('Are you sure you want to delete this project?')) {
+        try {
+          const response = await fetch(`http://127.0.0.1:5000/api/delete_project/${this.$route.params.projectId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          const data = await response.json();
+          alert(data.msg);
+          this.$router.push('/instructor_dashboard');
+        } catch (error) {
+          console.error('Error deleting project:', error);
+        }
+      }
+    },
+    trackProgress(studentId) {
+      this.$router.push(`/track_progress/${this.$route.params.projectId}/${studentId}`);
+    },
+    logout() {
+      localStorage.removeItem('token');
+      this.$router.push('/');
+    }
+  },
+  created() {
+    this.fetchProjectDetails();
+  }
+};
+</script>
+
 <style scoped>
 .project-details {
   min-height: 100vh;
@@ -374,76 +449,3 @@
   }
 }
 </style>
-<script>
-export default {
-  name: 'ProjectDetails',
-  data() {
-    return {
-      project: {
-        title: '',
-        problem: '',
-        milestones: [],
-        students: []
-      },
-      loading: true
-    };
-  },
-  methods: {
-    goBack() {
-      this.$router.push('/instructor_dashboard');
-    },
-    async fetchProjectDetails() {
-      this.loading = true;
-      try {
-        const response = await fetch(`http://127.0.0.1:5000/api/project_details/${this.$route.params.projectId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        this.project = data;
-      } catch (error) {
-        console.error('Error fetching project details:', error);
-      } finally {
-        this.loading = false;
-      }
-    },
-    editProject() {
-      this.$router.push(`/edit_project/${this.$route.params.projectId}`);
-    },
-    async deleteProject() {
-      if (confirm('Are you sure you want to delete this project?')) {
-        try {
-          const response = await fetch(`http://127.0.0.1:5000/api/delete_project/${this.$route.params.projectId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          const data = await response.json();
-          alert(data.msg);
-          this.$router.push('/instructor_dashboard');
-        } catch (error) {
-          console.error('Error deleting project:', error);
-        }
-      }
-    },
-    trackProgress(studentId) {
-      this.$router.push(`/track_progress/${this.$route.params.projectId}/${studentId}`);
-    },
-    logout() {
-      localStorage.removeItem('token');
-      this.$router.push('/');
-    }
-  },
-  created() {
-    this.fetchProjectDetails();
-  }
-};
-</script>

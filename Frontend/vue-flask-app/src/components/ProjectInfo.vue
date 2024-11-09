@@ -100,6 +100,79 @@
   </div>
 </template>
 
+
+<script>
+export default {
+  name: 'ProjectInfo',
+  data() {
+    return {
+      project: {
+        title: '',
+        problem: '',
+        milestones: [],
+        github_repo_url: '',
+        project_report: ''
+      }
+    };
+  },
+  methods: {
+    async fetchProjectInfo() {
+      try {
+        const response = await fetch(`http://127.0.0.1:5000/api/project_info/${this.$route.params.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        console.log(data);
+        this.project = data;
+      } catch (error) {
+        console.error('Error fetching project info:', error);
+      }
+    },
+    markAsCompleted(milestoneId) {
+      const milestone = this.project.milestones.find(m => m.id === milestoneId);
+      if (milestone) {
+        milestone.status = 'Completed';
+      }
+    },
+    async saveChanges() {
+      try {
+        const projectId = this.$route.params.id;
+        const response = await fetch(`http://127.0.0.1:5000/api/project_info/${projectId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(this.project)
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        alert(data.msg);
+      } catch (error) {
+        console.error('Error saving project info:', error);
+      }
+    },
+    logout() {
+      localStorage.removeItem('token');
+      this.$router.push('/');
+    }, goBack() {
+    this.$router.push('/student_dashboard');
+  }
+  },
+  created() {
+    this.fetchProjectInfo();
+  }
+};
+</script>
+
+
 <style scoped>
 .project-info {
   min-height: 100vh;
@@ -398,146 +471,5 @@ textarea.form-control {
   .container {
     margin-top: 8rem;
   }
-}
-</style>
-<script>
-export default {
-  name: 'ProjectInfo',
-  data() {
-    return {
-      project: {
-        title: '',
-        problem: '',
-        milestones: [],
-        github_repo_url: '',
-        project_report: ''
-      }
-    };
-  },
-  methods: {
-    async fetchProjectInfo() {
-      try {
-        const response = await fetch(`http://127.0.0.1:5000/api/project_info/${this.$route.params.id}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        console.log(data);
-        this.project = data;
-      } catch (error) {
-        console.error('Error fetching project info:', error);
-      }
-    },
-    markAsCompleted(milestoneId) {
-      const milestone = this.project.milestones.find(m => m.id === milestoneId);
-      if (milestone) {
-        milestone.status = 'Completed';
-      }
-    },
-    async saveChanges() {
-      try {
-        const projectId = this.$route.params.id;
-        const response = await fetch(`http://127.0.0.1:5000/api/project_info/${projectId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify(this.project)
-        });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        alert(data.msg);
-      } catch (error) {
-        console.error('Error saving project info:', error);
-      }
-    },
-    logout() {
-      localStorage.removeItem('token');
-      this.$router.push('/');
-    }, goBack() {
-    this.$router.push('/student_dashboard');
-  }
-  },
-  created() {
-    this.fetchProjectInfo();
-  }
-};
-</script>
-
-<style scoped>
-.project-info .navbar {
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.project-info .navbar-brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #333;
-}
-
-.project-info .container {
-  max-width: 2000px;
-  margin: 0 auto;
-}
-
-.project-info h2 {
-  margin-bottom: 1rem;
-  color: #2c3e50;
-}
-
-.project-info h3 {
-  margin-top: 2rem;
-  color: #2c3e50;
-}
-
-.project-info .milestone {
-  margin-bottom: 1rem;
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-}
-
-.project-info .btn-primary {
-  background-color: #007bff;
-  border-color: #007bff;
-}
-
-.project-info .btn-primary:hover {
-  background-color: #0056b3;
-  border-color: #004085;
-}
-
-.project-info .btn-success {
-  background-color: #28a745;
-  border-color: #28a745;
-}
-
-.project-info .btn-success:hover {
-  background-color: #218838;
-  border-color: #1e7e34;
-}
-
-.project-info .btn-danger {
-  background-color: #dc3545;
-  border-color: #dc3545;
-}
-
-.project-info .btn-danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
 }
 </style>

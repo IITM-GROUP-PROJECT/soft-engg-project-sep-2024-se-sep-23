@@ -63,7 +63,10 @@ export default {
             'Accept': 'application/vnd.github.v3+json'
         }
         });  
-        console.log(response)      
+        console.log(response)  
+        if (response.status === 409) {
+          throw new Error('No commits found for this repository')
+        }    
         if (!response.ok) {
           throw new Error('Failed to fetch commit data')
         }
@@ -88,7 +91,11 @@ export default {
           this.renderChart()
         })
       } catch (err) {
-        this.error = 'Failed to load commit history. Please check the repository URL and try again.'
+        if (err.message === 'No commits found for this repository') {
+          this.error = 'No commits found for this repository.'
+        } else {
+          this.error = 'Failed to load commit history. Please check the repository URL and try again.'
+        }
         console.error('Error fetching commit data:', err)
       } finally {
         this.loading = false
