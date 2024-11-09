@@ -187,39 +187,6 @@ def create_project():
     db.session.commit()
     return jsonify({"msg": "Project created successfully"}), 201
 
-# @app.route('/api/create_project', methods=['POST'])
-# @jwt_required()
-# def create_project():
-#     data = request.json
-#     email = get_jwt_identity()
-#     instructor = Instructor.query.filter_by(email=email).first()
-    
-#     project = Project(
-#         title=data['title'],
-#         problem=data['problem'],
-#         instructor_id=instructor.id
-#     )
-#     db.session.add(project)
-#     db.session.commit()
-
-#     for milestone_data in data['milestones']:
-#         milestone = Milestone(
-#             text=milestone_data['text'],
-#             deadline=datetime.strptime(milestone_data['deadline'], '%Y-%m-%d'),
-#             project_id=project.id
-#         )
-#         db.session.add(milestone)
-    
-#     for student_id in data['student_ids']:
-#         student_project = StudentProject(
-#             student_id=student_id,
-#             project_id=project.id
-#         )
-#         db.session.add(student_project)
-    
-#     db.session.commit()
-#     return jsonify({"msg": "Project created successfully"}), 201
-
 
 # API to get list of all Projects assigned at the Student Dashboard 
 @api_routes.route('/api/student_dashboard', methods=['GET'])

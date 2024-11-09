@@ -37,9 +37,7 @@ class StudentProject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
-    # needs to be checked
     github_repo_url = db.Column(db.String(200), nullable=True)
-    # remove the github repo and append the url from username
     project_report = db.Column(db.Text, nullable=True)
     student = db.relationship('Student', back_populates='projects')
     project = db.relationship('Project', back_populates='students')
