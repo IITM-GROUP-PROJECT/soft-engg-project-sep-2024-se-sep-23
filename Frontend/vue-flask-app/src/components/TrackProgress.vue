@@ -1,5 +1,6 @@
 <template>
   <div class="track-progress">
+    <!-- Navbar -->
     <nav class="navbar">
       <div class="navbar-content">
         <div class="navbar-brand">
@@ -19,6 +20,7 @@
       </div>
     </nav>
 
+    <!-- Container -->
     <div class="container">
       <!-- Project Overview -->
       <div class="section-card">
@@ -34,10 +36,12 @@
       <div class="section-card">
         <h3><i class="fas fa-tasks"></i> Milestone Progress</h3>
         <div class="milestones-grid">
-          <div v-for="milestone in project.milestones" 
-               :key="milestone.id" 
-               class="milestone-card"
-               :class="{ 'completed': milestone.status === 'Completed' }">
+          <div
+            v-for="milestone in project.milestones"
+            :key="milestone.id"
+            class="milestone-card"
+            :class="{ 'completed': milestone.status === 'Completed' }"
+          >
             <div class="milestone-content">
               <div class="milestone-header">
                 <span class="status-badge" :class="milestone.status.toLowerCase()">
@@ -72,38 +76,36 @@
         </div>
       </div>
 
-      <!-- Update AI Evaluation section -->
-  <div class="section-card">
-    <div class="card-header">
-      <h3><i class="fas fa-robot"></i> AI Evaluation</h3>
-      <button 
-        @click="getAIEvaluation" 
-        class="evaluate-btn"
-        :disabled="isEvaluating"
-      >
-        <i class="fas fa-sync-alt" :class="{ 'fa-spin': isEvaluating }"></i>
-        {{ isEvaluating ? 'Evaluating...' : 'Get AI Evaluation' }}
-      </button>
-    </div>
-    
-    <div v-if="evaluationError" class="error-message">
-      <i class="fas fa-exclamation-circle"></i>
-      {{ evaluationError }}
-    </div>
-    
-    <div v-if="aiEvaluation" class="evaluation-result markdown-content" v-html="renderedEvaluation"></div>
-  </div>
-
-      <!-- GitHub Commit History -->
+      <!-- AI Evaluation Section -->
       <div class="section-card">
-        <h3><i class="fas fa-chart-line"></i> Commit Activity</h3>
+        <div class="card-header">
+          <h3><i class="fas fa-robot"></i> AI Evaluation</h3>
+          <button @click="getAIEvaluation" class="evaluate-btn" :disabled="isEvaluating">
+            <i class="fas fa-sync-alt" :class="{ 'fa-spin': isEvaluating }"></i>
+            {{ isEvaluating ? 'Evaluating...' : 'Get AI Evaluation' }}
+          </button>
+        </div>
+        <div v-if="evaluationError" class="error-message">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ evaluationError }}
+        </div>
+        <div v-if="aiEvaluation" class="evaluation-result markdown-content" v-html="renderedEvaluation"></div>
+      </div>
+
+      <!-- Commit Activity Section -->
+      <div class="section-card">
+        <div class="card-header">
+          <h3><i class="fas fa-chart-line"></i> Commit Activity</h3>
+          <button @click="resyncCommits" class="resync-btn">
+            <i class="fas fa-sync-alt"></i> Resync Commits
+          </button>
+        </div>
+        <!-- GitHub Commit History Component -->
         <GitHubCommitHistory :repo-url="project.github_repo_url" />
       </div>
     </div>
   </div>
 </template>
-
-
 
 <script>
 import GitHubCommitHistory from './GitHubCommitHistory.vue';
@@ -145,11 +147,10 @@ export default {
         console.error('Error fetching progress:', error);
       }
     },
-    
     async getAIEvaluation() {
       this.isEvaluating = true;
       this.evaluationError = null;
-      
+
       try {
         const response = await fetch('http://127.0.0.1:5000/api/ai_eval', {
           method: 'POST',
@@ -162,11 +163,11 @@ export default {
             projectId: this.$route.params.projectId
           })
         });
-        
+
         if (!response.ok) {
           throw new Error('Failed to get AI evaluation');
         }
-        
+
         const data = await response.json();
         this.aiEvaluation = data.evaluation;
       } catch (error) {
@@ -176,13 +177,15 @@ export default {
         this.isEvaluating = false;
       }
     },
-    
+    async resyncCommits() {
+      // Add logic here if needed for re-fetching commits
+      console.log("Resyncing commits...");
+    },
     logout() {
       localStorage.removeItem('token');
       this.$router.push('/');
     },
     goBack() {
-      // Navigate back to project details page using project ID from route params
       this.$router.push(`/project/${this.$route.params.projectId}`);
     },
   },
@@ -198,6 +201,31 @@ export default {
 </script>
 
 <style scoped>
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resync-btn {
+  padding: 0.5rem 1.2rem;
+  background-color: #d7a84e;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.resync-btn:hover {
+  background-color: #c29843;
+}
+
+.resync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .track-progress {
   min-height: 100vh;
   background-color: #f8f9fa;
@@ -205,7 +233,7 @@ export default {
 
 .navbar {
   background-color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 0.75rem 1.5rem;
   position: fixed;
   top: 0;
@@ -240,7 +268,8 @@ export default {
   gap: 1rem;
 }
 
-.back-btn, .logout-btn {
+.back-btn,
+.logout-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -282,7 +311,7 @@ export default {
   border-radius: 12px;
   padding: 2rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
@@ -292,7 +321,8 @@ export default {
   margin-bottom: 1.5rem;
 }
 
-.card-header h2, .card-header h3 {
+.card-header h2,
+.card-header h3 {
   color: #791912;
   margin: 0;
 }
@@ -526,3 +556,4 @@ h3 {
   }
 }
 </style>
+

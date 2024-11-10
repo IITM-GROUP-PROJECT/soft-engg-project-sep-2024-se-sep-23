@@ -53,19 +53,22 @@ def instructor_signup():
 
 @api_routes.route('/student_signup', methods=['POST'])
 def student_signup():
-    data = request.get_json()
-    print(data)
-    user = Student.query.filter_by(email=data['email']).first()
-    if not user:
-        hashed_password = generate_password_hash(data['password'])
-        new_user = Student(email=data['email'], github_username = data['github_username'],password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
+    try:
+        data = request.get_json()
+        print(data)
+        user = Student.query.filter_by(email=data['email']).first()
+        if not user:
+            hashed_password = generate_password_hash(data['password'])
+            new_user = Student(email=data['email'], github_username=data['github_username'], password=hashed_password)
+            db.session.add(new_user)
+            db.session.commit()
 
-        access_token = create_access_token(identity=new_user.email, expires_delta=timedelta(seconds=3000))
-        return jsonify({'message': 'Registered successfully', 'access_token': access_token}), 200
+            access_token = create_access_token(identity=new_user.email, expires_delta=timedelta(seconds=3000))
+            return jsonify({'message': 'Registered successfully', 'access_token': access_token}), 200
 
-    return jsonify({'message': 'User already exists'}), 400
+        return jsonify({'message': 'User already exists'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # API for Instructor Dashboard
@@ -117,7 +120,8 @@ def create_project():
     # Step 2: Add Milestones
     for milestone_data in data['milestones']:
         milestone = Milestone(
-            text=milestone_data['text'],
+            title=milestone_data['text'],
+            description=milestone_data['description'],
             deadline=datetime.strptime(milestone_data['deadline'], '%Y-%m-%d'),
             project_id=project.id
         )
@@ -232,7 +236,8 @@ def get_project_info(project_id):
         'problem': project.problem,
         'milestones': [{
             'id': milestone.id,
-            'text': milestone.text,
+            'title': milestone.title,
+            'description': milestone.description,
             'deadline': milestone.deadline.strftime('%Y-%m-%d'),
             'status': next((sm.status for sm in student_milestones if sm.milestone_id == milestone.id), 'Pending')
         } for milestone in milestones],
@@ -282,28 +287,91 @@ def update_project_info(project_id):
 def get_project_details(project_id):
     email = get_jwt_identity()
     instructor = Instructor.query.filter_by(email=email).first()
+    
+    # Ensure the project belongs to the instructor
     project = Project.query.filter_by(id=project_id, instructor_id=instructor.id).first()
     if not project:
         return jsonify({"msg": "Project not found"}), 404
 
+    # Retrieve milestones and current assigned students
     milestones = Milestone.query.filter_by(project_id=project_id).all()
     student_projects = StudentProject.query.filter_by(project_id=project_id).all()
-    students = [Student.query.get(sp.student_id) for sp in student_projects]
+    assigned_students = [Student.query.get(sp.student_id) for sp in student_projects]
+
+    # Retrieve all students for potential assignment
+    all_students = Student.query.all()
 
     return jsonify({
         'title': project.title,
         'problem': project.problem,
         'milestones': [{
             'id': milestone.id,
-            'text': milestone.text,
+            'title': milestone.title,
+            'description': milestone.description,
             'deadline': milestone.deadline.strftime('%Y-%m-%d')
         } for milestone in milestones],
         'students': [{
             'id': student.id,
             'email': student.email
-        } for student in students]
+        } for student in assigned_students],
+        'students_add': [{
+            'id': student.id,
+            'email': student.email,
+            'github_username': student.github_username
+        } for student in all_students]
     }), 200
 
+from datetime import datetime
+
+@api_routes.route('/api/update_project/<int:project_id>', methods=['PUT'])
+def update_project(project_id):
+    data = request.get_json()
+
+    # Fetch the project from the database
+    project = Project.query.get_or_404(project_id)
+
+    # Update project title and description
+    project.title = data['title']
+    project.problem = data['problem']
+
+    # Update or remove milestones
+    for milestone_data in data['milestones']:
+        if 'id' in milestone_data:
+            milestone = Milestone.query.get(milestone_data['id'])
+            if milestone:
+                # Convert string to date before updating
+                if milestone_data.get('deadline'):
+                    milestone.deadline = datetime.strptime(milestone_data['deadline'], '%Y-%m-%d').date()
+
+                milestone.title = milestone_data['title']
+                milestone.description = milestone_data['description']
+        else:
+            # Add new milestone
+            if milestone_data.get('deadline'):
+                deadline = datetime.strptime(milestone_data['deadline'], '%Y-%m-%d').date()
+            new_milestone = Milestone(
+                title=milestone_data['title'],
+                description=milestone_data['description'],
+                deadline=deadline,
+                project_id=project_id
+            )
+            db.session.add(new_milestone)
+
+    # Remove deleted milestones
+    for milestone in project.milestones:
+        if milestone.id not in [m['id'] for m in data['milestones'] if 'id' in m]:
+            db.session.delete(milestone)
+
+    # Assign students (avoid duplicates)
+    for student_id in data['students']:
+        if not any(student.id == student_id for student in Project.students):
+            student = Student.query.get(student_id)
+            if student:
+                project.students.append(student)
+
+    db.session.commit()
+
+    return jsonify({'msg': 'Project updated successfully'}), 200
 
 # API to delete Project Details for an Instructor
 @api_routes.route('/api/delete_project/<int:project_id>', methods=['DELETE'])
@@ -332,74 +400,75 @@ def delete_project(project_id):
         return jsonify({"msg": f"Error deleting project: {str(e)}"}), 500
 
 # Update an existing project
-@api_routes.route('/api/update_project/<int:project_id>', methods=['PUT'])
-@jwt_required()
-def update_project(project_id):
-    email = get_jwt_identity()
-    instructor = Instructor.query.filter_by(email=email).first()
-    project = Project.query.filter_by(id=project_id, instructor_id=instructor.id).first()
-    
-    if not project:
-        return jsonify({"msg": "Project not found"}), 404
-
-    try:
-        data = request.get_json()
-        
-        # Update project details
-        if 'title' in data:
-            project.title = data['title']
-        if 'problem' in data:
-            project.problem = data['problem']
-            
-        # Handle milestones
-        if 'milestones' in data:
-            # Delete removed milestones
-            existing_milestone_ids = {m.id for m in project.milestones}
-            updated_milestone_ids = {m.get('id') for m in data['milestones'] if m.get('id')}
-            for milestone_id in existing_milestone_ids - updated_milestone_ids:
-                milestone = Milestone.query.get(milestone_id)
-                if milestone:
-                    # Delete related student milestones first
-                    StudentMilestone.query.filter_by(milestone_id=milestone_id).delete()
-                    db.session.delete(milestone)
-            
-            # Update or add milestones
-            for milestone_data in data['milestones']:
-                if milestone_id := milestone_data.get('id'):
-                    # Update existing milestone
-                    milestone = Milestone.query.get(milestone_id)
-                    if milestone and milestone.project_id == project_id:
-                        milestone.text = milestone_data['text']
-                        milestone.deadline = datetime.fromisoformat(milestone_data['deadline'])
-                else:
-                    # Add new milestone
-                    new_milestone = Milestone(
-                        text=milestone_data['text'],
-                        deadline=datetime.fromisoformat(milestone_data['deadline']),
-                        project_id=project_id
-                    )
-                    db.session.add(new_milestone)
-        
-        db.session.commit()
-        
-        # Return updated project data
-        return jsonify({
-            "msg": "Project updated successfully",
-            "project": {
-                "id": project.id,
-                "title": project.title,
-                "problem": project.problem,
-                "milestones": [{
-                    "id": m.id,
-                    "text": m.text,
-                    "deadline": m.deadline.isoformat()
-                } for m in project.milestones]
-            }
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"msg": f"Error updating project: {str(e)}"}), 500
+# Yash change, need discussion
+# @api_routes.route('/api/update_project/<int:project_id>', methods=['PUT'])
+# @jwt_required()
+# def update_project(project_id):
+#     email = get_jwt_identity()
+#     instructor = Instructor.query.filter_by(email=email).first()
+#     project = Project.query.filter_by(id=project_id, instructor_id=instructor.id).first()
+#
+#     if not project:
+#         return jsonify({"msg": "Project not found"}), 404
+#
+#     try:
+#         data = request.get_json()
+#
+#         # Update project details
+#         if 'title' in data:
+#             project.title = data['title']
+#         if 'problem' in data:
+#             project.problem = data['problem']
+#
+#         # Handle milestones
+#         if 'milestones' in data:
+#             # Delete removed milestones
+#             existing_milestone_ids = {m.id for m in project.milestones}
+#             updated_milestone_ids = {m.get('id') for m in data['milestones'] if m.get('id')}
+#             for milestone_id in existing_milestone_ids - updated_milestone_ids:
+#                 milestone = Milestone.query.get(milestone_id)
+#                 if milestone:
+#                     # Delete related student milestones first
+#                     StudentMilestone.query.filter_by(milestone_id=milestone_id).delete()
+#                     db.session.delete(milestone)
+#
+#             # Update or add milestones
+#             for milestone_data in data['milestones']:
+#                 if milestone_id := milestone_data.get('id'):
+#                     # Update existing milestone
+#                     milestone = Milestone.query.get(milestone_id)
+#                     if milestone and milestone.project_id == project_id:
+#                         milestone.text = milestone_data['text']
+#                         milestone.deadline = datetime.fromisoformat(milestone_data['deadline'])
+#                 else:
+#                     # Add new milestone
+#                     new_milestone = Milestone(
+#                         text=milestone_data['text'],
+#                         deadline=datetime.fromisoformat(milestone_data['deadline']),
+#                         project_id=project_id
+#                     )
+#                     db.session.add(new_milestone)
+#
+#         db.session.commit()
+#
+#         # Return updated project data
+#         return jsonify({
+#             "msg": "Project updated successfully",
+#             "project": {
+#                 "id": project.id,
+#                 "title": project.title,
+#                 "problem": project.problem,
+#                 "milestones": [{
+#                     "id": m.id,
+#                     "text": m.text,
+#                     "deadline": m.deadline.isoformat()
+#                 } for m in project.milestones]
+#             }
+#         }), 200
+#
+#     except Exception as e:
+#         db.session.rollback()
+#         return jsonify({"msg": f"Error updating project: {str(e)}"}), 500
 
 # API to get information about a student's progress on a project
 @api_routes.route('/api/track_progress/<int:project_id>/<int:student_id>', methods=['GET'])
@@ -423,7 +492,8 @@ def track_progress(project_id, student_id):
         'problem': project.problem,
         'milestones': [{
             'id': milestone.id,
-            'text': milestone.text,
+            'text': milestone.title,
+            'description': milestone.description,
             'deadline': milestone.deadline.strftime('%Y-%m-%d'),
             'status': next((sm.status for sm in student_milestones if sm.milestone_id == milestone.id), 'Pending')
         } for milestone in milestones],
@@ -477,3 +547,5 @@ def ai_evaluation():
         return jsonify({
             'error': str(e)
         }), 500
+
+

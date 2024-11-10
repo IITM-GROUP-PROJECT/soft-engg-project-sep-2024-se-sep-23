@@ -1,85 +1,86 @@
 <template>
-  <div class="edit-project">
+  <div class="project-edit">
     <nav class="navbar">
       <div class="navbar-content">
         <div class="navbar-brand">
           <img src="/iitm.png" alt="IITM Logo" class="navbar-logo" />
           <span>Edit Project</span>
         </div>
-        <button @click="goBack" class="back-btn">
-          <i class="fas fa-arrow-left"></i>
-          Back
-        </button>
+        <div class="nav-actions">
+          <button @click="goBack" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+          </button>
+          <button @click="logout" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            Logout
+          </button>
+        </div>
       </div>
     </nav>
 
     <div class="container">
       <div v-if="loading" class="loading-state">
         <i class="fas fa-spinner fa-spin"></i>
-        <p>Loading project...</p>
+        <p>Loading project details...</p>
       </div>
 
-      <div v-else class="form-card">
-        <form @submit.prevent="updateProject">
-          <div class="form-section">
-            <h3>Project Details</h3>
-            <div class="form-group">
-              <label>Project Title</label>
-              <input type="text" v-model="project.title" required>
+      <div v-else class="content">
+        <!-- Project Info Card -->
+        <div class="section-card project-info-card">
+          <div class="problem-statement">
+            <h2>Project Title</h2>
+            <input v-model="project.title" class="input-title" placeholder="Project Title" />
+          </div>
+          <div class="problem-statement">
+            <h3>Problem Statement</h3>
+            <textarea v-model="project.problem" class="input-problem"
+              placeholder="Describe the problem statement here..."></textarea>
+          </div>
+        </div>
+
+        <!-- Milestones Section -->
+        <div class="section-card">
+          <h3><i class="fas fa-tasks"></i> Project Milestones</h3>
+          <div class="milestones-list">
+            <div v-for="(milestone, index) in project.milestones" :key="milestone.id || index" class="milestone-card">
+              <input v-model="milestone.title" class="milestone-input" placeholder="Milestone title" />
+              <input v-model="milestone.description" class="milestone-input" placeholder="Milestone description" />
+              <input type="date" v-model="milestone.deadline" class="milestone-deadline-input" />
+              <button @click="removeMilestone(index)" class="remove-btn">Remove</button>
             </div>
-            <div class="form-group">
-              <label>Problem Statement</label>
-              <textarea v-model="project.problem" rows="4" required></textarea>
-            </div>
+          </div>
+          <br>
+          <!-- Add Milestone Button -->
+          <button @click="addMilestone" class="add-milestone-btn">Add Milestone</button>
+        </div>
+
+        <!-- Students Section -->
+        <div class="section-card">
+          <h3><i class="fas fa-users"></i> Assign Students</h3>
+
+          <!-- Search Bar -->
+          <div class="search-container">
+            <input type="text" v-model="searchQuery" class="search-bar" placeholder="Search students...">
+            <i class="fas fa-search search-icon"></i>
           </div>
 
-          <div class="form-section">
-            <div class="milestone-header">
-              <h3>Project Milestones</h3>
-              <button type="button" @click="addMilestone" class="add-milestone-btn">
-                <i class="fas fa-plus"></i> Add Milestone
-              </button>
-            </div>
-            <div class="milestones-container">
-              <div v-for="(milestone, index) in project.milestones" 
-                   :key="milestone.id || index" 
-                   class="milestone-card">
-                <div class="milestone-number">#{{ index + 1 }}</div>
-                <div class="milestone-inputs">
-                  <input 
-                    type="text" 
-                    v-model="milestone.text"
-                    placeholder="Milestone Description"
-                    required
-                  >
-                  <input 
-                    type="date" 
-                    v-model="milestone.deadline"
-                    required
-                  >
-                </div>
-                <button 
-                  type="button"
-                  @click="removeMilestone(index)" 
-                  class="remove-btn"
-                >
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
+          <!-- Students List -->
+          <div class="students-list">
+            <div v-for="student in filteredStudents" :key="student.id" class="student-item">
+              <label class="checkbox-container">
+                <input type="checkbox" :value="student.id" v-model="selectedStudents">
+                <span class="student-email">{{ student.email }}</span>
+              </label>
             </div>
           </div>
+        </div>
 
-          <div class="form-actions">
-            <button type="submit" class="submit-btn">
-              <i class="fas fa-save"></i> Save Changes
-            </button>
-          </div>
-        </form>
+        <button @click="saveChanges" class="save-btn">Save Changes</button>
       </div>
     </div>
   </div>
 </template>
-
 
 <script>
 export default {
@@ -89,84 +90,221 @@ export default {
       project: {
         title: '',
         problem: '',
-        milestones: []
+        milestones: [],
+        students: []
       },
+      students_add: [],  // Unassigned students (for potential assignment)
+      selectedStudents: [], // To track selected students for assignment
+      searchQuery: '', // Search query to filter students
       loading: true
+    };
+  },
+  computed: {
+    filteredStudents() {
+      if (!this.searchQuery) {
+        return this.students_add;
+      }
+      return this.students_add.filter(student =>
+        student.email.toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
     }
   },
   methods: {
-    goBack() {
-      this.$router.push(`/project/${this.$route.params.projectId}`);
-    },
-    async fetchProjectDetails() {
-    try {
-      const response = await fetch(`http://127.0.0.1:5000/api/project_details/${this.$route.params.projectId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch project');
-      const data = await response.json();
-      this.project = {
-        ...data,
-        milestones: data.milestones.map(m => ({
-          ...m,
-          deadline: new Date(m.deadline).toISOString().split('T')[0] // Convert to YYYY-MM-DD
-        }))
-      };
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to load project details');
-    } finally {
-      this.loading = false;
-    }
-    },
-    addMilestone() {
-    this.project.milestones.push({
-      text: '',
-      deadline: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD
-    });
-  },
-    removeMilestone(index) {
-      this.project.milestones.splice(index, 1);
-    },
-    async updateProject() {
+    async saveChanges() {
       try {
+        // Clean up empty milestones (check for non-empty title, description, and deadline)
+        const cleanedMilestones = this.project.milestones.filter(milestone =>
+          milestone.title.trim() !== '' && milestone.description.trim() !== '' && milestone.deadline
+        );
+
+        // Prepare the updated project object with the current milestones and selected students
+        const updatedProject = {
+          ...this.project,
+          milestones: cleanedMilestones,
+          students: this.selectedStudents // Include selected students
+        };
+
+        // Send the updated project to the backend
         const response = await fetch(`http://127.0.0.1:5000/api/update_project/${this.$route.params.projectId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
-          body: JSON.stringify(this.project)
+          body: JSON.stringify(updatedProject)
         });
-        
-        if (!response.ok) throw new Error('Failed to update project');
-        
+
+        if (!response.ok) throw new Error('Failed to save changes');
         alert('Project updated successfully');
-        this.$router.push(`/project/${this.$route.params.projectId}`);
+        this.$router.push('/instructor_dashboard');
       } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to update project');
+        console.error('Error saving project:', error);
       }
+    },
+    goBack() {
+      this.$router.push('/instructor_dashboard');
+    },
+    async fetchProjectDetails() {
+      this.loading = true;
+      try {
+        const response = await fetch(`http://127.0.0.1:5000/api/project_details/${this.$route.params.projectId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (!response.ok) throw new Error('Failed to fetch project details');
+        const data = await response.json();
+
+        this.project = data;
+        this.students_add = data.students_add; // Get all students for assignment
+        this.selectedStudents = data.students.map(student => student.id); // Pre-select assigned students
+      } catch (error) {
+        console.error('Error fetching project details:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    addMilestone() {
+      this.project.milestones.push({ title: '', description: '', deadline: '' });
+    },
+    removeMilestone(index) {
+      this.project.milestones.splice(index, 1);
+    },
+    logout() {
+      localStorage.removeItem('token');
+      this.$router.push('/');
     }
   },
   created() {
     this.fetchProjectDetails();
   }
-}
+};
 </script>
 
 
 <style scoped>
-.edit-project {
+/* Retained styles from the original component */
+.search-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.search-bar {
+  width: 100%;
+  padding: 10px 35px 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.search-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.students-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.student-item {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.student-item:last-child {
+  border-bottom: none;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.checkbox-container input {
+  margin-right: 10px;
+}
+
+.student-email {
+  margin-left: 8px;
+}
+
+/* Custom checkbox styling */
+.checkmark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #4a90e2;
+  border-radius: 3px;
+  margin-right: 10px;
+}
+
+.checkbox-container input:checked + .checkmark {
+  background-color: #4a90e2;
+}
+/* Project Edit Styles */
+.input-title,
+.input-problem,
+.milestone-input,
+.student-email-input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.milestone-deadline-input {
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.add-milestone-btn,
+.add-student-btn,
+.save-btn,
+.remove-btn {
+  padding: 0.5rem 1rem;
+  background-color: #791912;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: -1rem;
+}
+
+.save-btn {
+  background-color: #4caf50;
+}
+
+.remove-btn {
+  background-color: #dc3545;
+  margin-left: 1rem;
+}
+
+.save-btn:hover,
+.add-milestone-btn:hover,
+.add-student-btn:hover,
+.remove-btn:hover {
+  opacity: 0.9;
+}
+
+/* Retained styles from the original code */
+.project-edit {
   min-height: 100vh;
   background-color: #f8f9fa;
 }
 
 .navbar {
   background-color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 0.75rem 1.5rem;
   position: fixed;
   top: 0;
@@ -176,7 +314,7 @@ export default {
 }
 
 .navbar-content {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
@@ -196,164 +334,90 @@ export default {
   height: 40px;
 }
 
-.container {
-  max-width: 1600px;
-  margin: 6rem auto 2rem;
-  padding: 0 1.5rem;
+.nav-actions {
+  display: flex;
+  gap: 1rem;
 }
 
-.form-card {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.form-section {
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid #eee;
-}
-
-.form-section h3 {
-  color: #791912;
-  margin-bottom: 1.5rem;
-  font-size: 1.25rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #444;
-  font-weight: 500;
-}
-
-input, textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #eee;
+.back-btn,
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
   border-radius: 6px;
+  cursor: pointer;
   transition: all 0.3s ease;
 }
 
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #791912;
+.back-btn {
+  background-color: transparent;
+  border: 1px solid #791912;
+  color: #791912;
 }
 
-.milestone-header {
+.back-btn:hover {
+  background-color: #791912;
+  color: white;
+}
+
+.logout-btn {
+  background-color: #dc3545;
+  border: none;
+  color: white;
+}
+
+.logout-btn:hover {
+  background-color: #c82333;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 6rem auto 2rem;
+  padding: 0 2rem;
+}
+
+.section-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.project-info-card {
+  border-top: 4px solid #791912;
+}
+
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
 }
 
-.milestone-card {
+.card-header h2 {
+  color: #791912;
+  margin: 0;
+}
+
+.milestones-list {
   display: grid;
-  grid-template-columns: auto 1fr auto;
   gap: 1rem;
-  align-items: center;
-  background: #f8f9fa;
+}
+
+.milestone-card {
+  display: flex;
+  gap: 1rem;
   padding: 1rem;
+  border: 1px solid #eee;
   border-radius: 8px;
-  margin-bottom: 1rem;
+  align-items: center;
 }
 
 .milestone-number {
-  color: #791912;
-  font-weight: 600;
-}
-
-.milestone-inputs {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid #791912;
-  color: #791912;
-  transition: all 0.3s ease;
-}
-
-.back-btn:hover {
-  background: #791912;
-  color: white;
-}
-
-.add-milestone-btn {
-  background: #d7a84e;
-  border: none;
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.add-milestone-btn:hover {
-  background: #c29843;
-}
-
-.remove-btn {
-  background: transparent;
-  border: none;
-  color: #dc3545;
-  padding: 0.5rem;
-  cursor: pointer;
-}
-
-.remove-btn:hover {
-  color: #bd2130;
-}
-
-.submit-btn {
-  width: 100%;
-  background: #791912;
-  border: none;
-  color: white;
-  font-weight: 500;
-  padding: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.submit-btn:hover {
-  background: #8a1c14;
-}
-
-@media (max-width: 768px) {
-  .container {
-    padding: 0 1rem;
-  }
-  
-  .form-card {
-    padding: 1.5rem;
-  }
-  
-  .milestone-card {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-  
-  .milestone-number {
-    margin-bottom: 0.5rem;
-  }
+  background-color: #f8f9fa;
+  color: #333;
 }
 </style>

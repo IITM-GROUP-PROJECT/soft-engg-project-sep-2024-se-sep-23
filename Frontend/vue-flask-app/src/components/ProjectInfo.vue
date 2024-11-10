@@ -19,7 +19,7 @@
             </div>
     </nav>
 
-    <div class="container">
+    <div style="margin-left:10%" class="container">
       <div class="project-header">
         <h2>{{ project.title }}</h2>
         <div class="project-description">{{ project.problem }}</div>
@@ -41,7 +41,8 @@
                 </span>
               </div>
               <div class="milestone-content">
-                <p class="milestone-description">{{ milestone.text }}</p>
+                <p class="milestone-description">{{ milestone.title }}</p>
+                <p class="milestone-description">{{ milestone.description }}</p>
                 <p class="milestone-deadline">
                   <i class="far fa-calendar-alt"></i>
                   Due: {{ milestone.deadline }}
@@ -177,6 +178,7 @@ export default {
 .project-info {
   min-height: 100vh;
   background-color: #f8f9fa;
+  padding-top: 9rem;
 }
 
 .navbar {
@@ -255,7 +257,7 @@ export default {
 
 .container {
   max-width: 1200px;
-  margin: 6rem auto 2rem;
+  margin: auto 2rem;
   padding: 0 1.5rem;
 }
 

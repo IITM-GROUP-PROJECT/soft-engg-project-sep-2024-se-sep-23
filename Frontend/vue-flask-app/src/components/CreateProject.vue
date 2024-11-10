@@ -20,7 +20,7 @@
             <h3>Project Details</h3>
             <div class="form-group">
               <label for="title">Project Title</label>
-              <input type="text" v-model="title" id="title" required>
+              <input type="text" v-model="title" id="title" required />
             </div>
             <div class="form-group">
               <label for="problem">Project Problem Statement</label>
@@ -29,37 +29,57 @@
           </div>
 
           <div class="form-section">
-            <h3>Student Assignment</h3>
+            <h3>Assign Students</h3>
             <div class="form-group">
-              <label for="students">Select Students</label>
-              <div class="select-wrapper">
-                <select v-model="selectedStudents" id="students" multiple>
-                  <option v-for="student in students" :key="student.id" :value="student.id">
-                    {{ student.email }}
-                  </option>
-                </select>
-              </div>
-              <button type="button" @click="selectAllStudents" class="secondary-btn">
-                <i class="fas fa-users"></i> Select All Students
-              </button>
+              <label for="students">Upload Students Details in CSV</label>
+              <input
+                type="file"
+                id="student-upload"
+                @change="handleFileUpload"
+                accept=".csv"
+                required
+              />
             </div>
           </div>
 
           <div class="form-section">
             <div class="milestone-header">
               <h3>Project Milestones</h3>
-              <button type="button" @click="addMilestone" class="add-milestone-btn">
+              <button
+                type="button"
+                @click="addMilestone"
+                class="add-milestone-btn"
+              >
                 <i class="fas fa-plus"></i> Add Milestone
               </button>
             </div>
             <div class="milestones-container">
-              <div v-for="(milestone, index) in milestones" :key="index" class="milestone-card">
+              <div
+                v-for="(milestone, index) in milestones"
+                :key="index"
+                class="milestone-card"
+              >
                 <div class="milestone-number">#{{ index + 1 }}</div>
                 <div class="milestone-inputs">
-                  <input type="text" v-model="milestone.text" placeholder="Milestone Description" required>
-                  <input type="date" v-model="milestone.deadline" required>
+                  <input
+                    type="text"
+                    v-model="milestone.title"
+                    placeholder="Milestone Title"
+                    required
+                  />
+                  <input
+                    type="text"
+                    v-model="milestone.description"
+                    placeholder="Milestone Description"
+                    required
+                  />
+                  <input type="date" v-model="milestone.deadline" required />
                 </div>
-                <button type="button" @click="removeMilestone(index)" class="remove-btn">
+                <button
+                  type="button"
+                  @click="removeMilestone(index)"
+                  class="remove-btn"
+                >
                   <i class="fas fa-trash"></i>
                 </button>
               </div>
@@ -77,78 +97,95 @@
   </div>
 </template>
 
-
 <script>
+import Papa from 'papaparse'; // Make sure to install the papaparse library
+
 export default {
-  name: 'CreateProject',
+  name: "CreateProject",
   data() {
     return {
-      title: '',
-      problem: '',
+      title: "",
+      problem: "",
       students: [],
       selectedStudents: [],
-      milestones: [{ text: '', deadline: '' }]
+      milestones: [{ title: "", description: "", deadline: "" }],
     };
   },
   methods: {
     async fetchStudents() {
       try {
-        const response = await fetch('http://127.0.0.1:5000/api/students', {
+        const response = await fetch("http://127.0.0.1:5000/api/students", {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         });
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          throw new Error("Network response was not ok");
         }
         const data = await response.json();
         this.students = data;
       } catch (error) {
-        console.error('Error fetching students:', error);
+        console.error("Error fetching students:", error);
       }
     },
+    handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target.result;
+          this.parseCSV(content);
+        };
+        reader.readAsText(file);
+      }
+    },
+    parseCSV(content) {
+      Papa.parse(content, {
+        complete: (result) => {
+          this.selectedStudents = result.data.map((row) => row[0]); // Assuming the first column contains student IDs or relevant data
+        },
+        header: false, // Set to true if the CSV has headers
+      });
+    },
     addMilestone() {
-      this.milestones.push({ text: '', deadline: '' });
+      this.milestones.push({ title: "", description: "", deadline: "" });
     },
     removeMilestone(index) {
       this.milestones.splice(index, 1);
     },
-    selectAllStudents() {
-      this.selectedStudents = this.students.map(student => student.id);
-    },
     async createProject() {
       try {
-        const response = await fetch('http://127.0.0.1:5000/api/create_project', {
-          method: 'POST',
+        const response = await fetch("http://127.0.0.1:5000/api/create_project", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
           body: JSON.stringify({
             title: this.title,
             problem: this.problem,
             student_ids: this.selectedStudents,
-            milestones: this.milestones
-          })
+            milestones: this.milestones,
+          }),
         });
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          throw new Error("Network response was not ok");
         }
         const data = await response.json();
         alert(data.msg);
-        this.$router.push('/instructor_dashboard');
+        this.$router.push("/instructor_dashboard");
       } catch (error) {
-        console.error('Error creating project:', error);
+        console.error("Error creating project:", error);
       }
     },
     logout() {
-      localStorage.removeItem('token');
-      this.$router.push('/');
-    }
+      localStorage.removeItem("token");
+      this.$router.push("/");
+    },
   },
   created() {
     this.fetchStudents();
-  }
+  },
 };
 </script>
 

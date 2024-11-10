@@ -1,4 +1,4 @@
-# db models file
+    # db models file
 
 from datetime import datetime
 from .extensions import db
@@ -25,9 +25,12 @@ class Project(db.Model):
     milestones = db.relationship('Milestone', back_populates='project', cascade='all, delete-orphan')
     students = db.relationship('StudentProject', back_populates='project')
 
+
+
 class Milestone(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.Text, nullable=False)
+    title = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
     deadline = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     project = db.relationship('Project', back_populates='milestones')

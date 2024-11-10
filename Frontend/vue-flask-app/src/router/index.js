@@ -24,7 +24,7 @@ export default new Router({
   routes: [
     {
       path: '/',
-      name: 'HomePage',  
+      name: 'HomePage',
       component: HomePage
     },
     {
@@ -60,6 +60,12 @@ export default new Router({
       path: '/create_project',
       name: 'CreateProject',
       component: CreateProject
+    },
+    {
+      path: '/edit_project/:projectId',
+      name: 'EditProject',
+      component: EditProject,
+      props: true
     },
     {
     path: '/myproject/:id',

@@ -52,12 +52,11 @@
         <div class="section-card">
           <h3><i class="fas fa-tasks"></i> Project Milestones</h3>
           <div class="milestones-list">
-            <div v-for="(milestone, index) in project.milestones" 
-                 :key="milestone.id || index" 
-                 class="milestone-card">
+            <div v-for="(milestone, index) in project.milestones" :key="milestone.id || index" class="milestone-card">
               <div class="milestone-number">#{{ index + 1 }}</div>
               <div class="milestone-content">
-                <p class="milestone-text">{{ milestone.text }}</p>
+                <p class="milestone-text">{{ milestone.title }}</p>
+                <p class="milestone-text">{{ milestone.description }}</p>
                 <p class="milestone-deadline">
                   <i class="far fa-calendar-alt"></i>
                   Due: {{ new Date(milestone.deadline).toLocaleDateString() }}
@@ -70,10 +69,13 @@
         <!-- Students Section -->
         <div class="section-card">
           <h3><i class="fas fa-users"></i> Assigned Students</h3>
+          <div class="search-container">
+            <input type="text" class="search-bar" placeholder="Search Students..." v-model="searchQuery">
+            <i class="fas fa-search search-icon"></i>
+          </div>
+
           <div class="students-grid">
-            <div v-for="student in project.students" 
-                 :key="student.id" 
-                 class="student-card">
+            <div v-for="student in project.students" :key="student.id" class="student-card">
               <div class="student-info">
                 <i class="fas fa-user-graduate"></i>
                 <span>{{ student.email }}</span>
@@ -85,6 +87,7 @@
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -166,6 +169,57 @@ export default {
 </script>
 
 <style scoped>
+/* Add these styles in the <style scoped> section */
+
+.search-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 1rem 0;
+}
+
+.search-bar {
+  width: 100%;
+  padding: 12px 45px 12px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 25px;
+  font-size: 14px;
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.search-bar:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 5px rgba(74, 144, 226, 0.3);
+}
+
+.search-bar:hover {
+  border-color: #bdbdbd;
+}
+
+.search-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #757575;
+  font-size: 18px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .search-container {
+    max-width: 100%;
+  }
+
+  .search-bar {
+    padding: 10px 40px 10px 15px;
+    font-size: 13px;
+  }
+}
+
+
 .project-details {
   min-height: 100vh;
   background-color: #f8f9fa;
@@ -173,7 +227,7 @@ export default {
 
 .navbar {
   background-color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 0.75rem 1.5rem;
   position: fixed;
   top: 0;
@@ -208,7 +262,8 @@ export default {
   gap: 1rem;
 }
 
-.back-btn, .logout-btn {
+.back-btn,
+.logout-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -250,7 +305,7 @@ export default {
   border-radius: 12px;
   padding: 2rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
 }
 
@@ -275,7 +330,8 @@ export default {
   gap: 1rem;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn,
+.delete-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -430,7 +486,7 @@ export default {
   .students-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .student-card {
     flex-direction: column;
     align-items: stretch;
