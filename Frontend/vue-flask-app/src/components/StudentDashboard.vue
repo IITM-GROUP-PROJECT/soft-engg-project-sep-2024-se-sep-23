@@ -39,6 +39,7 @@
         <div v-for="project in projects" :key="project.id" class="project-card">
           <div class="project-card-content">
             <h3 class="project-title">{{ project.title }}</h3>
+            <div class="course-badge">{{ project.course }}</div>
             <p class="project-description">{{ project.problem }}</p>
             <div class="project-footer">
               <button @click="viewProjectInfo(project.id)" class="view-project-btn">
@@ -220,6 +221,16 @@ export default {
   font-size: 0.95rem;
   margin-bottom: 1.5rem;
   line-height: 1.5;
+}
+
+.course-badge {
+  display: inline-block;
+  background-color: #f0f0f0;
+  color: #666;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
 }
 
 .project-footer {

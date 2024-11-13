@@ -28,25 +28,29 @@
 
       <div v-else class="content">
         <!-- Project Info Card -->
-        <div class="section-card project-info-card">
-          <div class="card-header">
-            <h2>{{ project.title }}</h2>
-            <div class="action-buttons">
-              <button @click="editProject" class="edit-btn">
-                <i class="fas fa-edit"></i>
-                Edit Project
-              </button>
-              <button @click="deleteProject" class="delete-btn">
-                <i class="fas fa-trash"></i>
-                Delete
-              </button>
+        <!-- Update the Project Info Card section -->
+          <div class="section-card project-info-card">
+            <div class="card-header">
+              <div class="title-section">
+                <h2>{{ project.title }}</h2>
+                <div class="course-badge">{{ project.course }}</div>
+              </div>
+              <div class="action-buttons">
+                <button @click="editProject" class="edit-btn">
+                  <i class="fas fa-edit"></i>
+                  Edit Project
+                </button>
+                <button @click="deleteProject" class="delete-btn">
+                  <i class="fas fa-trash"></i>
+                  Delete
+                </button>
+              </div>
+            </div>
+            <div class="problem-statement">
+              <h3>Problem Statement</h3>
+              <p>{{ project.problem }}</p>
             </div>
           </div>
-          <div class="problem-statement">
-            <h3>Problem Statement</h3>
-            <p>{{ project.problem }}</p>
-          </div>
-        </div>
 
         <!-- Milestones Section -->
         <div class="section-card">
@@ -313,6 +317,21 @@ export default {
   border-top: 4px solid #791912;
 }
 
+.title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.course-badge {
+  display: inline-block;
+  background-color: #f0f0f0;
+  color: #666;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -483,6 +502,15 @@ export default {
 }
 
 @media (max-width: 992px) {
+  .card-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .action-buttons {
+    width: 100%;
+    justify-content: stretch;
+  }
   .students-grid {
     grid-template-columns: 1fr;
   }

@@ -42,6 +42,7 @@
         <div v-for="project in projects" :key="project.id" class="project-card">
           <div class="project-card-content">
             <h3>{{ project.title }}</h3>
+            <div class="course-badge">{{ project.course }}</div>
             <p class="project-stats">
               <span><i class="fas fa-users"></i> {{ project.student_count || 0 }} Students</span>
               <span><i class="fas fa-tasks"></i> {{ project.milestone_count || 0 }} Milestones</span>
@@ -224,6 +225,16 @@ export default {
   color: #791912;
   margin-bottom: 1rem;
   font-size: 1.25rem;
+}
+
+.course-badge {
+  display: inline-block;
+  background-color: #f0f0f0;
+  color: #666;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
 }
 
 .project-stats {

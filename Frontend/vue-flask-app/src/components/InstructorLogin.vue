@@ -60,7 +60,7 @@ export default {
   },
   methods: {
     login() {
-      fetch('http://127.0.0.1:5000/instructor_login', {
+      fetch('http://127.0.0.1:5000/api/instructor_login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

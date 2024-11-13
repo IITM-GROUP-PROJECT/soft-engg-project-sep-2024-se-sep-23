@@ -24,8 +24,13 @@ class Project(db.Model):
     instructor = db.relationship('Instructor', back_populates='projects')
     milestones = db.relationship('Milestone', back_populates='project', cascade='all, delete-orphan')
     students = db.relationship('StudentProject', back_populates='project')
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    course = db.relationship('Course', back_populates='projects')
 
-
+class Course(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False, unique=True)
+    projects = db.relationship('Project', back_populates='course')
 
 class Milestone(db.Model):
     id = db.Column(db.Integer, primary_key=True)

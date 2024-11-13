@@ -29,6 +29,24 @@
           </div>
 
           <div class="form-section">
+            <h3>Course Information</h3>
+            <div class="form-group">
+              <label for="courseSelection">Select Course</label>
+              <select v-model="selectedCourse" id="courseSelection" required>
+                <option value="">Select a course</option>
+                <option v-for="course in courses" :key="course.id" :value="course.id">
+                  {{ course.name }}
+                </option>
+                <option value="new">+ Add New Course</option>
+              </select>
+            </div>
+            <div v-if="selectedCourse === 'new'" class="form-group">
+              <label for="newCourse">New Course Name</label>
+              <input type="text" v-model="newCourseName" id="newCourse" required />
+            </div>
+          </div>
+
+          <div class="form-section">
             <h3>Assign Students</h3>
             <div class="form-group">
               <label for="students">Upload Students Details in CSV</label>
@@ -109,6 +127,9 @@ export default {
       students: [],
       selectedStudents: [],
       milestones: [{ title: "", description: "", deadline: "" }],
+      courses: [],
+      selectedCourse: "",
+      newCourseName: "",
     };
   },
   methods: {
@@ -153,21 +174,42 @@ export default {
     removeMilestone(index) {
       this.milestones.splice(index, 1);
     },
+    async fetchCourses() {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/api/courses", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (response.ok) {
+          this.courses = await response.json();
+        }
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+      }
+    },
     async createProject() {
       try {
+        
+        const projectData = {
+          title: this.title,
+          problem: this.problem,
+          student_ids: this.selectedStudents,
+          milestones: this.milestones,
+          new_course: this.selectedCourse === 'new',
+          course_id: this.selectedCourse === 'new' ? null : this.selectedCourse,
+          course_name: this.selectedCourse === 'new' ? this.newCourseName : null
+        };
+
         const response = await fetch("http://127.0.0.1:5000/api/create_project", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-          body: JSON.stringify({
-            title: this.title,
-            problem: this.problem,
-            student_ids: this.selectedStudents,
-            milestones: this.milestones,
-          }),
+          body: JSON.stringify(projectData),
         });
+
         if (!response.ok) {
           throw new Error("Network response was not ok");
         }
@@ -185,6 +227,7 @@ export default {
   },
   created() {
     this.fetchStudents();
+    this.fetchCourses();
   },
 };
 </script>
@@ -391,4 +434,18 @@ select[multiple] {
     margin-bottom: 0.5rem;
   }
 }
+
+select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #eee;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+select:focus {
+  outline: none;
+  border-color: #791912;
+}
+
 </style>
