@@ -60,7 +60,7 @@ export default {
   },
   methods: {
     signup() {
-      fetch('http://127.0.0.1:5000/instructor_signup', {
+      fetch('http://127.0.0.1:5000/api/instructor_signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -16,7 +16,7 @@ import os
 
 api_routes = Blueprint("api", __name__)
 
-@api_routes.route('/instructor_login', methods=['POST'])
+@api_routes.route('/api/instructor_login', methods=['POST'])
 def instructor_login():
     data = request.get_json()
     user = Instructor.query.filter_by(email=data['email']).first()
@@ -26,7 +26,7 @@ def instructor_login():
     access_token = create_access_token(identity=user.email, expires_delta=timedelta(seconds=900))
     return jsonify({'access_token': access_token}), 200
 
-@api_routes.route('/student_login', methods=['POST'])
+@api_routes.route('/api/student_login', methods=['POST'])
 def student_login():
     data = request.get_json()
     user = Student.query.filter_by(email=data['email']).first()
@@ -36,7 +36,7 @@ def student_login():
     access_token = create_access_token(identity=user.email, expires_delta=timedelta(seconds=900))
     return jsonify({'access_token': access_token}), 200
 
-@api_routes.route('/instructor_signup', methods=['POST'])
+@api_routes.route('/api/instructor_signup', methods=['POST'])
 def instructor_signup():
     data = request.get_json()
     user = Instructor.query.filter_by(email=data['email']).first()
@@ -51,7 +51,7 @@ def instructor_signup():
 
     return jsonify({'message': 'User already exists'}), 400
 
-@api_routes.route('/student_signup', methods=['POST'])
+@api_routes.route('/api/student_signup', methods=['POST'])
 def student_signup():
     try:
         data = request.get_json()
@@ -82,6 +82,7 @@ def instructor_dashboard():
         'id': project.id,
         'title': project.title,
         'problem': project.problem,
+        'course': project.course.name,
         'student_count': len(project.students),  # Count of StudentProject relations
         'milestone_count': len(project.milestones)  # Count of Milestone relations
     } for project in projects]), 200
@@ -97,6 +98,26 @@ def get_students():
         'email': student.email
     } for student in students]), 200
 
+# API to get list of all Courses needed to create a new Project
+@api_routes.route('/api/courses', methods=['GET'])
+@jwt_required()
+def get_courses():
+    courses = Course.query.all()
+    return jsonify([{'id': c.id, 'name': c.name} for c in courses])
+
+# API to create a new Course (not in use)
+@api_routes.route('/api/create_course', methods=['POST'])
+@jwt_required()
+def create_course():
+    data = request.json
+
+    course = Course(
+        name=data['name'],
+    )
+    db.session.add(course)
+    db.session.commit()
+    return jsonify({'id': course.id, 'name': course.name}), 201
+
 import requests
 import uuid
 
@@ -107,12 +128,24 @@ def create_project():
     data = request.json
     email = get_jwt_identity()
     instructor = Instructor.query.filter_by(email=email).first()
+
+    # Create course if needed
+    if data.get('new_course'):
+        course = Course(
+            name=data['course_name'],
+        )
+        db.session.add(course)
+        db.session.commit()
+        course_id = course.id
+    else:
+        course_id = data['course_id']
     
     # Step 1: Create the Project
     project = Project(
         title=data['title'],
         problem=data['problem'],
-        instructor_id=instructor.id
+        instructor_id=instructor.id,
+        course_id=course_id
     )
     db.session.add(project)
     db.session.commit()
@@ -120,7 +153,7 @@ def create_project():
     # Step 2: Add Milestones
     for milestone_data in data['milestones']:
         milestone = Milestone(
-            title=milestone_data['text'],
+            title=milestone_data['title'],
             description=milestone_data['description'],
             deadline=datetime.strptime(milestone_data['deadline'], '%Y-%m-%d'),
             project_id=project.id
@@ -212,6 +245,7 @@ def student_dashboard():
             'id': project.id,
             'title': project.title,
             'problem': project.problem,
+            'course': project.course.name,
             'github_repo_url': sp.github_repo_url
         })
     return jsonify(projects), 200
@@ -234,6 +268,7 @@ def get_project_info(project_id):
     return jsonify({
         'title': project.title,
         'problem': project.problem,
+        'course': project.course.name,
         'milestones': [{
             'id': milestone.id,
             'title': milestone.title,
@@ -304,6 +339,7 @@ def get_project_details(project_id):
     return jsonify({
         'title': project.title,
         'problem': project.problem,
+        'course': project.course.name,
         'milestones': [{
             'id': milestone.id,
             'title': milestone.title,

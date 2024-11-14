@@ -9,7 +9,7 @@
                 </button>
                 <div class="navbar-brand">
                 <img src="/iitm.png" alt="IITM Logo" class="navbar-logo" />
-                <span>{{ project.title }}</span>
+                <span>Project Information</span>
                 </div>
             </div>
             <button @click="logout" class="logout-btn">
@@ -22,6 +22,7 @@
     <div style="margin-left:10%" class="container">
       <div class="project-header">
         <h2>{{ project.title }}</h2>
+        <div class="course-badge">{{ project.course }}</div>
         <div class="project-description">{{ project.problem }}</div>
       </div>
 
@@ -110,6 +111,7 @@ export default {
       project: {
         title: '',
         problem: '',
+        course: '',
         milestones: [],
         github_repo_url: '',
         project_report: ''
@@ -277,6 +279,16 @@ export default {
 .project-description {
   color: #666;
   line-height: 1.6;
+}
+
+.course-badge {
+  display: inline-block;
+  background-color: #f0f0f0;
+  color: #666;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 1rem 0;
 }
 
 .content-grid {
