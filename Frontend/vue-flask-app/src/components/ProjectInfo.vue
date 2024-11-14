@@ -19,7 +19,7 @@
             </div>
     </nav>
 
-    <div style="margin-left:10%" class="container">
+    <div class="container">
       <div class="project-header">
         <h2>{{ project.title }}</h2>
         <div class="course-badge">{{ project.course }}</div>
@@ -259,8 +259,9 @@ export default {
 
 .container {
   max-width: 1200px;
-  margin: auto 2rem;
+  margin: 0 auto; /* Changed from 'auto 2rem' to '0 auto' for proper centering */
   padding: 0 1.5rem;
+  width: 90%; /* Added to ensure consistent width */
 }
 
 .project-header {
