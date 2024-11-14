@@ -39,7 +39,7 @@ class Milestone(db.Model):
     deadline = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     project = db.relationship('Project', back_populates='milestones')
-    student_milestones = db.relationship('StudentMilestone', back_populates='milestone')
+    student_milestones = db.relationship('StudentMilestone', back_populates='milestone', cascade='all, delete-orphan')
 
 class StudentProject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
