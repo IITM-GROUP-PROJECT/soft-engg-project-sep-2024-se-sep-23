@@ -3,6 +3,8 @@
 from flask import Blueprint, jsonify, request
 from app.models import *
 from app.extensions import db
+from app.services.project_services import ProjectService
+from app.decorators import instructor_required, student_required
 
 from flask import *
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
@@ -40,34 +42,41 @@ def student_login():
 
 @api_routes.route('/api/instructor_signup', methods=['POST'])
 def instructor_signup():
-    data = request.get_json()
-    user = Instructor.query.filter_by(email=data['email']).first()
-    if not user:
+    try:
+        data = request.get_json()
+        email = data['email']
+        
+        # Check if email already exists in Student or Instructor tables
+        if Student.query.filter_by(email=email).first() or Instructor.query.filter_by(email=email).first():
+            return jsonify({'message': 'Already Signed up. Email already exists'}), 400
+        
         hashed_password = generate_password_hash(data['password'])
-        new_user = Instructor(email=data['email'], password=hashed_password)
+        new_user = Instructor(email=email, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
 
         access_token = create_access_token(identity=new_user.email, expires_delta=timedelta(seconds=3000))
         return jsonify({'message': 'Registered successfully', 'access_token': access_token}), 200
-
-    return jsonify({'message': 'User already exists'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @api_routes.route('/api/student_signup', methods=['POST'])
 def student_signup():
     try:
         data = request.get_json()
-        user = Student.query.filter_by(email=data['email']).first()
-        if not user:
-            hashed_password = generate_password_hash(data['password'])
-            new_user = Student(email=data['email'], github_username=data['github_username'], password=hashed_password)
-            db.session.add(new_user)
-            db.session.commit()
+        email = data['email']
+        
+        # Check if email already exists in Student or Instructor tables
+        if Student.query.filter_by(email=email).first() or Instructor.query.filter_by(email=email).first():
+            return jsonify({'message': 'Already Signed up. Email already exists'}), 400
+        
+        hashed_password = generate_password_hash(data['password'])
+        new_user = Student(email=email, github_username=data['github_username'], password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
 
-            access_token = create_access_token(identity=new_user.email, expires_delta=timedelta(seconds=3000))
-            return jsonify({'message': 'Registered successfully', 'access_token': access_token}), 200
-
-        return jsonify({'message': 'User already exists'}), 400
+        access_token = create_access_token(identity=new_user.email, expires_delta=timedelta(seconds=3000))
+        return jsonify({'message': 'Registered successfully', 'access_token': access_token}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -75,6 +84,7 @@ def student_signup():
 # API for Instructor Dashboard
 @api_routes.route('/api/instructor_dashboard', methods=['GET'])
 @jwt_required()
+@instructor_required
 def instructor_dashboard():
     email = get_jwt_identity()
     instructor = Instructor.query.filter_by(email=email).first()
@@ -125,261 +135,44 @@ import uuid
 # API to create a new Project
 @api_routes.route('/api/create_project', methods=['POST'])
 @jwt_required()
+@instructor_required
 def create_project():
-    data = request.json
-    email = get_jwt_identity()
-    instructor = Instructor.query.filter_by(email=email).first()
-
-    # Create course if needed
-    if data.get('new_course'):
-        course = Course(
-            name=data['course_name'],
-        )
-        db.session.add(course)
-        db.session.commit()
-        course_id = course.id
-    else:
-        course_id = data['course_id']
-    
-    # Step 1: Create the Project
-    project = Project(
-        title=data['title'],
-        problem=data['problem'],
-        instructor_id=instructor.id,
-        course_id=course_id
-    )
-    db.session.add(project)
-    db.session.commit()
-
-    # Step 2: Add Milestones
-    for milestone_data in data['milestones']:
-        milestone = Milestone(
-            title=milestone_data['title'],
-            description=milestone_data['description'],
-            deadline=datetime.strptime(milestone_data['deadline'], '%Y-%m-%d'),
-            project_id=project.id
-        )
-        db.session.add(milestone)
-    
-    db.session.commit()
-
-    # GitHub API authentication token
-    github_token = "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"
-    headers = {
-        "Authorization": f"Bearer {github_token}",
-        "Accept": "application/vnd.github+json"
-    }
-
-    # Step 3: Create GitHub repository for each student and add as collaborator
-    for student_id in data['student_ids']:
-        # Fetch the student's GitHub username
-        student = Student.query.get(student_id)
-        if not student or not student.github_username:
-            continue  # Skip if student or GitHub username is missing
+    try:
+        data = request.json
+        email = get_jwt_identity()
         
-        # Repository name format
-        # Generate a unique repository name using a UUID
-        unique_id = uuid.uuid4().hex[:6]
-        repo_name = f"{project.title.replace(' ', '_')}-{student_id}-{unique_id}"
+        result, status_code = ProjectService.create_project(data, email)
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-        # GitHub Repository creation payload
-        repo_payload = {
-            "name": repo_name,
-            "description": "This is your project repository",
-            "homepage": "https://github.com",
-            "private": True,
-            "has_issues": True,
-            "has_projects": True,
-            "has_wiki": True
-        }
-
-        # Create GitHub repository
-        repo_url = f"https://api.github.com/orgs/integrationTestORG12/repos"
-        try:
-            response = requests.post(repo_url, json=repo_payload, headers=headers)
-            response.raise_for_status()  # Raise an error for bad responses
-            repo_data = response.json()
-            github_repo_url = f"https://github.com/{repo_data['full_name']}"
-        except requests.RequestException as e:
-            db.session.rollback()
-            return jsonify({"error": "Failed to create GitHub repository", "details": str(e)}), 500
-
-        # Store the GitHub repository URL in the database
-        student_project = StudentProject(
-            student_id=student_id,
-            project_id=project.id,
-            github_repo_url=github_repo_url
-        )
-        db.session.add(student_project)
-
-        # Add student as a collaborator with 'maintain' permissions
-        collaborator_url = f"https://api.github.com/repos/integrationTestORG12/{repo_name}/collaborators/{student.github_username}"
-        collaborator_payload = {
-            "permission": "maintain"
-        }
-        try:
-            collaborator_response = requests.put(collaborator_url, json=collaborator_payload, headers=headers)
-            collaborator_response.raise_for_status()
-        except requests.RequestException as e:
-            db.session.rollback()
-            return jsonify({"error": "Failed to add collaborator", "details": str(e)}), 500
-
-    # Final commit for student projects and GitHub URLs
-    db.session.commit()
-    return jsonify({"msg": "Project created successfully"}), 201
-
-# API to edit project 
 @api_routes.route('/api/edit_project/<int:project_id>', methods=['GET', 'PUT'])
 @jwt_required()
+@instructor_required
 def edit_project(project_id):
     email = get_jwt_identity()
     instructor = Instructor.query.filter_by(email=email).first()
 
     if request.method == 'GET':
-        # Get project details including unassigned students
-        project = Project.query.get_or_404(project_id)
-        
-        # Get currently assigned student IDs
-        assigned_student_ids = [sp.student_id for sp in project.students]
-        
-        # Get unassigned students
-        unassigned_students = Student.query.filter(~Student.id.in_(assigned_student_ids)).all()
-        
-        return jsonify({
-            'project': {
-                'id': project.id,
-                'title': project.title,
-                'problem': project.problem,
-                'course_id': project.course_id,
-                'milestones': [{
-                    'id': m.id,
-                    'title': m.title,
-                    'description': m.description,
-                    'deadline': m.deadline.strftime('%Y-%m-%d')
-                } for m in project.milestones],
-                'assigned_students': assigned_student_ids,
-            },
-            'unassigned_students': [{
-                'id': s.id,
-                'email': s.email,
-                'github_username': s.github_username
-            } for s in unassigned_students]
-        })
-
-    # Handle PUT request
-    data = request.json
-    project = Project.query.get_or_404(project_id)
-
-    # Handle course creation/update
-    if data.get('new_course'):
-        course = Course(
-            name=data['course_name'],
-        )
-        db.session.add(course)
-        db.session.commit()
-        course_id = course.id
-    else:
-        course_id = data['course_id']
-    
-    project.title = data['title']
-    project.problem = data['problem']
-    project.course_id = course_id
-
-    # Update milestones
-    existing_milestone_ids = set(m.id for m in project.milestones)
-    updated_milestone_ids = set(m.get('id') for m in data['milestones'] if m.get('id'))
-
-
-    # Update/Add milestones
-    for milestone_data in data['milestones']:
-        if milestone_data.get('id'):
-            # Update existing milestone
-            milestone = Milestone.query.get(milestone_data['id'])
-            milestone.title = milestone_data['title']
-            milestone.description = milestone_data['description']
-            milestone.deadline = datetime.strptime(milestone_data['deadline'], '%Y-%m-%d')
-        else:
-            # Add new milestone
-            milestone = Milestone(
-                title=milestone_data['title'],
-                description=milestone_data['description'],
-                deadline=datetime.strptime(milestone_data['deadline'], '%Y-%m-%d'),
-                project_id=project.id
-            )
-            db.session.add(milestone)
-
-    # Delete removed milestones
-    for milestone in project.milestones:
-        if milestone.id not in updated_milestone_ids:
-            # Delete associated StudentMilestone records first
-            StudentMilestone.query.filter_by(milestone_id=milestone.id).delete()
-            db.session.delete(milestone)
-
-    # Handle new student assignments
-    new_student_ids = set(data['student_ids']) - set(s.student_id for s in project.students)
-    
-    # Create repositories for new students
-    github_token = "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"
-    headers = {
-        "Authorization": f"Bearer {github_token}",
-        "Accept": "application/vnd.github+json"
-    }
-
-    for student_id in new_student_ids:
-        student = Student.query.get(student_id)
-        if not student or not student.github_username:
-            continue
-
-        unique_id = uuid.uuid4().hex[:6]
-        repo_name = f"{project.title.replace(' ', '_')}-{student_id}-{unique_id}"
-
-        repo_payload = {
-            "name": repo_name,
-            "description": "This is your project repository",
-            "private": True,
-            "has_issues": True,
-            "has_projects": True,
-            "has_wiki": True
-        }
-
         try:
-            response = requests.post(
-                "https://api.github.com/orgs/integrationTestORG12/repos", 
-                json=repo_payload, 
-                headers=headers
-            )
-            response.raise_for_status()
-            repo_data = response.json()
-            github_repo_url = f"https://github.com/{repo_data['full_name']}"
-
-            # Add student to project
-            student_project = StudentProject(
-                student_id=student_id,
-                project_id=project.id,
-                github_repo_url=github_repo_url
-            )
-            db.session.add(student_project)
-
-            # Add student as collaborator
-            collaborator_url = f"https://api.github.com/repos/integrationTestORG12/{repo_name}/collaborators/{student.github_username}"
-            collaborator_payload = {"permission": "maintain"}
-            collaborator_response = requests.put(
-                collaborator_url, 
-                json=collaborator_payload, 
-                headers=headers
-            )
-            collaborator_response.raise_for_status()
-
-        except requests.RequestException as e:
-            db.session.rollback()
+            project_details = ProjectService.get_project_details(project_id)
+            return jsonify(project_details)
+        except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    db.session.commit()
-    return jsonify({"msg": "Project updated successfully"})
+    # Handle PUT request
+    try:
+        data = request.json
+        result = ProjectService.update_project(project_id, data)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # API to get list of all Projects assigned at the Student Dashboard 
 @api_routes.route('/api/student_dashboard', methods=['GET'])
 @jwt_required()
+@student_required
 def student_dashboard():
     email = get_jwt_identity()
     student = Student.query.filter_by(email=email).first()
@@ -400,6 +193,7 @@ def student_dashboard():
 # API to get Project Info for a Student
 @api_routes.route('/api/project_info/<int:project_id>', methods=['GET'])
 @jwt_required()
+@student_required
 def get_project_info(project_id):
     email = get_jwt_identity()
     student = Student.query.filter_by(email=email).first()
@@ -427,9 +221,10 @@ def get_project_info(project_id):
     }), 200
 
 
-# API to update Project Info for a Student
+# API to Save Project Progress and Resources for a Student
 @api_routes.route('/api/project_info/<int:project_id>', methods=['POST'])
 @jwt_required()
+@student_required
 def update_project_info(project_id):
     data = request.json
     email = get_jwt_identity()
@@ -465,6 +260,7 @@ def update_project_info(project_id):
 # API to get Project Details for an Instructor
 @api_routes.route('/api/project_details/<int:project_id>', methods=['GET'])
 @jwt_required()
+@instructor_required
 def get_project_details(project_id):
     email = get_jwt_identity()
     instructor = Instructor.query.filter_by(email=email).first()
@@ -503,36 +299,18 @@ def get_project_details(project_id):
         } for student in all_students]
     }), 200
 
-# API to delete Project Details for an Instructor
 @api_routes.route('/api/delete_project/<int:project_id>', methods=['DELETE'])
 @jwt_required()
+@instructor_required
 def delete_project(project_id):
     email = get_jwt_identity()
-    instructor = Instructor.query.filter_by(email=email).first()
-    project = Project.query.filter_by(id=project_id, instructor_id=instructor.id).first()
-    if not project:
-        return jsonify({"msg": "Project not found"}), 404
-
-    try:
-        # Delete StudentMilestone records
-        StudentMilestone.query.filter_by(project_id=project_id).delete()
-        
-        # Delete StudentProject records
-        StudentProject.query.filter_by(project_id=project_id).delete()
-        
-        # Delete project (milestones will be deleted by cascade)
-        db.session.delete(project)
-        db.session.commit()
-        return jsonify({"msg": "Project deleted successfully"}), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"msg": f"Error deleting project: {str(e)}"}), 500
+    return ProjectService.delete_project(project_id, email)
 
 
 # API to get information about a student's progress on a project
 @api_routes.route('/api/track_progress/<int:project_id>/<int:student_id>', methods=['GET'])
 @jwt_required()
+@instructor_required
 def track_progress(project_id, student_id):
     email = get_jwt_identity()
     instructor = Instructor.query.filter_by(email=email).first()
