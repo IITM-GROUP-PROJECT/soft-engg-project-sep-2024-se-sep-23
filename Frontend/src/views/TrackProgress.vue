@@ -108,7 +108,7 @@
 </template>
 
 <script>
-import GitHubCommitHistory from './GitHubCommitHistory.vue';
+import GitHubCommitHistory from '../components/GitHubCommitHistory.vue';
 import { marked } from 'marked';
 
 export default {

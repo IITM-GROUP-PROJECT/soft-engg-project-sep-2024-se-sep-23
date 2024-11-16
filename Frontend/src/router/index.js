@@ -1,21 +1,21 @@
 import Vue from 'vue';
 import Router from 'vue-router';
-import HomePage from '../components/HomePage.vue';
-import InstructorLogin from '../components/InstructorLogin.vue';
-import InstructorSignup from '../components/InstructorSignup.vue';
+import HomePage from '../views/HomePage.vue';
+import InstructorLogin from '../views/InstructorLogin.vue';
+import InstructorSignup from '../views/InstructorSignup.vue';
 
-import StudentLogin from '@/components/StudentLogin.vue';
-import StudentSignup from '@/components/StudentSignup.vue';
+import StudentLogin from '../views/StudentLogin.vue';
+import StudentSignup from '../views/StudentSignup.vue';
 
-import StudentDashboard from '@/components/StudentDashboard.vue';
-import ProjectInfo from '@/components/ProjectInfo.vue';
+import StudentDashboard from '../views/StudentDashboard.vue';
+import ProjectInfo from '../views/ProjectInfo.vue';
 
-import InstructorDashboard from '@/components/InstructorDashboard.vue';
-import CreateProject from '@/components/CreateProject.vue';
+import InstructorDashboard from '../views/InstructorDashboard.vue';
+import CreateProject from '../views/CreateProject.vue';
 
-import ProjectDetails from '@/components/ProjectDetails.vue';
-import EditProject from '@/components/EditProject.vue';
-import TrackProgress from '@/components/TrackProgress.vue';
+import ProjectDetails from '../views/ProjectDetails.vue';
+import EditProject from '../views/EditProject.vue';
+import TrackProgress from '../views/TrackProgress.vue';
 
 
 Vue.use(Router);
@@ -63,12 +63,6 @@ export default new Router({
       component: CreateProject
     },
     {
-      path: '/edit_project/:projectId',
-      name: 'EditProject',
-      component: EditProject,
-      props: true
-    },
-    {
     path: '/myproject/:id',
     name: 'ProjectInfo',
     component: ProjectInfo,
@@ -91,6 +85,6 @@ export default new Router({
     name: 'EditProject',
     component: EditProject,
     props: true
-  }
+  },
   ]
 });
