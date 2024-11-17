@@ -47,8 +47,16 @@ class StudentProject(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     github_repo_url = db.Column(db.String(200), nullable=True)
     project_report = db.Column(db.Text, nullable=True)
+    report_created_at = db.Column(db.DateTime, nullable=True)
     student = db.relationship('Student', back_populates='projects')
     project = db.relationship('Project', back_populates='students')
+
+class AIEvaluation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_project_id = db.Column(db.Integer, db.ForeignKey('student_project.id'), nullable=False)
+    evaluation = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False)
+    student_project = db.relationship('StudentProject', backref=db.backref('ai_evaluation', uselist=False))
 
 class StudentMilestone(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -56,4 +64,5 @@ class StudentMilestone(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     milestone_id = db.Column(db.Integer, db.ForeignKey('milestone.id'), nullable=False)
     status = db.Column(db.String(50), nullable=False, default='Pending')
+    milestone_completion_date = db.Column(db.DateTime, nullable=True)
     milestone = db.relationship('Milestone', back_populates='student_milestones')

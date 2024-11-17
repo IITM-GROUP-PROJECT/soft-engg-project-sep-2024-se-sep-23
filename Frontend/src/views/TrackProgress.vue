@@ -49,10 +49,16 @@
                 </span>
               </div>
               <p class="milestone-text">{{ milestone.text }}</p>
-              <p class="milestone-deadline">
-                <i class="far fa-calendar-alt"></i>
-                Due: {{ new Date(milestone.deadline).toLocaleDateString() }}
-              </p>
+              <div class="milestone-dates">
+                <p class="milestone-deadline">
+                  <i class="far fa-calendar-alt"></i>
+                  Due: {{ new Date(milestone.deadline).toLocaleDateString() }}
+                </p>
+                <p v-if="milestone.completion_date" class="milestone-completion">
+                  <i class="fas fa-check-circle"></i>
+                  Completed: {{ new Date(milestone.completion_date).toLocaleString() }}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -71,7 +77,13 @@
           </div>
           <div class="resource-item">
             <label>Project Report</label>
-            <div class="report-content">{{ project.project_report }}</div>
+            <div class="report-content">
+              <div class="report-meta" v-if="project.report_created_at">
+                <i class="far fa-clock"></i>
+                Submitted: {{ new Date(project.report_created_at).toLocaleString() }}
+              </div>
+              {{ project.project_report }}
+            </div>
           </div>
         </div>
       </div>
@@ -82,14 +94,21 @@
           <h3><i class="fas fa-robot"></i> AI Evaluation</h3>
           <button @click="getAIEvaluation" class="evaluate-btn" :disabled="isEvaluating">
             <i class="fas fa-sync-alt" :class="{ 'fa-spin': isEvaluating }"></i>
-            {{ isEvaluating ? 'Evaluating...' : 'Get AI Evaluation' }}
+            {{ isEvaluating ? 'Evaluating...' : aiEvaluation ? 'Re-evaluate' : 'Evaluate' }}
           </button>
         </div>
+        
         <div v-if="evaluationError" class="error-message">
           <i class="fas fa-exclamation-circle"></i>
           {{ evaluationError }}
         </div>
-        <div v-if="aiEvaluation" class="evaluation-result markdown-content" v-html="renderedEvaluation"></div>
+
+        <div v-if="aiEvaluation" class="evaluation-result markdown-content">
+          <div class="evaluation-meta">
+            Last evaluated: {{ new Date(evaluationDate).toLocaleString() }}
+          </div>
+          <div v-html="renderedEvaluation"></div>
+        </div>
       </div>
 
       <!-- Commit Activity Section -->
@@ -123,9 +142,11 @@ export default {
         problem: '',
         milestones: [],
         github_repo_url: '',
-        project_report: ''
+        project_report: '',
+        student_project_id: null,
       },
       aiEvaluation: null,
+      evaluationDate: null,
       isEvaluating: false,
       evaluationError: null
     };
@@ -147,21 +168,34 @@ export default {
         console.error('Error fetching progress:', error);
       }
     },
+    async fetchExistingEvaluation() {
+      try {
+        const response = await fetch(`http://127.0.0.1:5000/api/ai_eval/${this.project.student_project_id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          this.aiEvaluation = data.evaluation;
+          this.evaluationDate = data.created_at;
+        }
+      } catch (error) {
+        console.error('Error fetching evaluation:', error);
+      }
+    },
+    
     async getAIEvaluation() {
       this.isEvaluating = true;
       this.evaluationError = null;
 
       try {
-        const response = await fetch('http://127.0.0.1:5000/api/ai_eval', {
+        const response = await fetch(`http://127.0.0.1:5000/api/ai_eval/${this.project.student_project_id}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
-            report: this.project.project_report,
-            projectId: this.$route.params.projectId
-          })
+          }
         });
 
         if (!response.ok) {
@@ -170,12 +204,27 @@ export default {
 
         const data = await response.json();
         this.aiEvaluation = data.evaluation;
+        this.evaluationDate = data.created_at;
+        console.log('AI evaluation date:', this.evaluationDate);
       } catch (error) {
         console.error('Error getting AI evaluation:', error);
         this.evaluationError = 'Failed to get AI evaluation. Please try again later.';
       } finally {
         this.isEvaluating = false;
       }
+    },
+    formatDate(report_created_at) {
+        const date = new Date(report_created_at);
+        const options = {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+        };
+        return date.toLocaleString('en-US', options).replace(',', '');
     },
     async resyncCommits() {
       // Add logic here if needed for re-fetching commits
@@ -191,6 +240,7 @@ export default {
   },
   created() {
     this.fetchProgress();
+    this.fetchExistingEvaluation();
   },
   computed: {
     renderedEvaluation() {
@@ -224,6 +274,18 @@ export default {
 .resync-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.evaluation-meta {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.evaluation-result {
+  margin-top: 1rem;
 }
 
 .track-progress {
@@ -390,6 +452,24 @@ h3 {
   gap: 0.5rem;
 }
 
+.milestone-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.milestone-completion {
+  color: #28a745;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.milestone-completion i {
+  color: #28a745;
+}
+
 .resources-grid {
   display: grid;
   gap: 2rem;
@@ -432,6 +512,17 @@ h3 {
   color: #444;
   line-height: 1.6;
   min-height: 100px;
+}
+
+.report-meta {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .evaluate-btn {

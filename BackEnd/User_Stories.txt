@@ -1,0 +1,63 @@
+USER STORIES
+
+2.1. Instructor Stories
+Project Creation
+As an instructor,
+● I want to create and manage software projects within the platform,
+So that I can define the scope and objectives of each project.
+● I want to be able to break these projects down into multiple milestones,
+So that I can assign deadlines and track student progress over time.
+This will help me ensure that students are working systematically towards completing the
+project’s learning goals.
+Monitor Student’s Progress
+As an instructor,
+● I want to view the commit histories for every student’s project,
+So that I can review the progress being made by students.
+By examining these commit logs, I can verify that milestones are being completed on
+time and students are actively contributing to the project.
+Automated AI Insights
+As an instructor,
+● I want to utilize Generative AI tools to automatically analyze project reports
+submitted by students,
+So that I can receive feedback on the quality of the content.
+These AI tools should help me access the quality of Student’s Project Reports, so that it
+will save me time, allowing for a more efficient review process while maintaining high
+standards.
+Centralized Dashboard
+As an instructor,
+● I want a centralized dashboard that gives me a comprehensive overview of all
+ongoing projects and student’s progress,
+So that I can see the status of each project and milestones, and other important
+data.
+
+2.2. Student Stories
+View Assigned Projects and Milestones
+As a student,
+● I want to be able to view all my assigned projects, along with their milestones and
+deadlines,
+So that I can clearly understand what is expected of me and plan my work
+accordingly.
+This will help me prioritize tasks and ensure that I am keeping up with the required
+project milestones.
+Update Progress
+As a student,
+● I want the ability to update the status of a milestone,
+So that my instructor can check my progress and know when I’ve finished a task.
+This feature will help me stay organized and ensure that my efforts are being accurately
+tracked as I work through the project milestones.
+
+2.3. Professor Stories
+High-Level Project Review
+As a professor,
+● I want to be able to review the overall project description created by the instructor,
+So that I can ensure it meets the academic standards and learning outcomes for the
+course.
+This review process will allow me to confirm that the project provides the right level of
+challenge and covers relevant skills.
+
+2.4. System Administrator Stories
+Ensure System Security
+As a system administrator,
+● I want to manage user accounts and roles within the platform,
+So that I can maintain proper access control and ensure only authorized users have
+access to certain feature

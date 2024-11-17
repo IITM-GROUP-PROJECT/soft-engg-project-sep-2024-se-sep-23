@@ -156,8 +156,7 @@ export default {
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
-        const data = await response.json();
-        alert(data.msg);
+        alert('Project info saved successfully!');
       } catch (error) {
         console.error('Error saving project info:', error);
       }
