@@ -10,6 +10,8 @@ from flask import *
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
+from sqlalchemy import func
+
 
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -382,3 +384,74 @@ def ai_evaluation():
         return jsonify({
             'error': str(e)
         }), 500
+
+@api_routes.route('/api/get-commit-data', methods=['GET'])
+@jwt_required()
+@instructor_required
+def get_commit_data():
+    user_id = request.args.get('userId')
+
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+
+    try:
+
+        commit_data = db.session.query(
+            func.date(Commits.commit_date).label('commit_date'),
+            func.count(Commits.commit_id).label('commit_count')
+        ).filter_by(user_id=user_id).group_by(func.date(Commits.commit_date)).all()
+        formatted_data = [
+            {"date": commit_date, "commits": commit_count}
+            for commit_date, commit_count in commit_data
+        ]
+        return jsonify(formatted_data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@api_routes.route('/api/fetch-commits', methods=['POST'])
+@jwt_required()
+@instructor_required
+def fetch_commits():
+    data = request.json
+    owner = data.get('owner')
+    repo = data.get('repo')
+    user_id = data.get('userId')
+    try:
+
+        headers =\
+            {
+            'Authorization': 'Bearer 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',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        response = requests.get(f'https://api.github.com/repos/{owner}/{repo}/commits', headers=headers)
+
+        if response.status_code == 409:
+            return jsonify({"error": "No commits found for this repository"}), 409
+
+        if not response.ok:
+            return jsonify({"error": "Failed to fetch commit data"}), response.status_code
+
+        commits = response.json()
+
+
+        for commit in commits:
+            sha = commit['sha']
+            message = commit['commit']['message']
+            date = commit['commit']['author']['date']
+            db.session.flush()
+
+            if not Commits.query.filter_by(commit_sha=sha).first():
+                new_commit = Commits(
+                    commit_message=message,
+                    commit_sha=sha,
+                    commit_date=datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ"),
+                    user_id=user_id
+                )
+                db.session.add(new_commit)
+                print(new_commit)
+
+        db.session.commit()
+        return jsonify({"message": "Commits fetched and stored successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

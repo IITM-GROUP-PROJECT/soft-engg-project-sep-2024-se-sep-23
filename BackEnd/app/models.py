@@ -57,3 +57,10 @@ class StudentMilestone(db.Model):
     milestone_id = db.Column(db.Integer, db.ForeignKey('milestone.id'), nullable=False)
     status = db.Column(db.String(50), nullable=False, default='Pending')
     milestone = db.relationship('Milestone', back_populates='student_milestones')
+
+class Commits(db.Model):
+    commit_id = db.Column(db.Integer, primary_key=True)
+    commit_message = db.Column(db.String(300), unique=False, nullable=True)
+    commit_sha = db.Column(db.String(256), unique=True, nullable=False)
+    commit_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)

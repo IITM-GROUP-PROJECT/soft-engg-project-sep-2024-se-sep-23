@@ -4,17 +4,14 @@
       <h3>Commit History</h3>
     </div>
     <div class="card-body">
-      <!-- Loading State -->
       <div v-if="loading" class="text-center p-4">
-        <p>Loading commit history...</p>
+        <p>Loading chart...</p>
       </div>
 
-      <!-- Error State -->
       <div v-if="error" class="alert alert-danger">
         {{ error }}
       </div>
 
-      <!-- Chart Container -->
       <div v-if="!loading && !error" class="chart-container">
         <canvas ref="chartCanvas" id="commitChart"></canvas>
       </div>
@@ -23,13 +20,13 @@
 </template>
 
 <script>
-import { Chart } from 'chart.js/auto'
+import { Chart } from 'chart.js/auto';
 
 export default {
   name: 'GitHubCommitHistory',
   
   props: {
-    repoUrl: {
+    userId: {
       type: String,
       required: true
     }
@@ -37,96 +34,73 @@ export default {
 
   data() {
     return {
-      loading: true,
+      loading: false,
       error: null,
-      chart: null,
-      commitData: []
-    }
+      chart: null
+    };
   },
 
   methods: {
-    async fetchCommitData() {
-      if (!this.repoUrl) {
-        this.error = 'No repository URL provided'
-        this.loading = false
-        return
-      }
+ 
+    async loadChartData() {
+      this.error = null;
 
       try {
-        const urlParts = this.repoUrl.split('/')
-        const owner = urlParts[urlParts.length - 2]
-        const repo = urlParts[urlParts.length - 1]
+        const response = await fetch(`http://127.0.0.1:5000/api/get-commit-data?userId=${this.userId}`,{
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
 
-        const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits`, {
-        headers: {
-            'Authorization': 'Bearer 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', // Replace 'abcd' with your actual GitHub token
-            'Accept': 'application/vnd.github.v3+json'
-        }
-        });  
-        console.log(response)  
-        if (response.status === 409) {
-          throw new Error('No commits found for this repository')
-        }    
         if (!response.ok) {
-          throw new Error('Failed to fetch commit data')
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to load commit data');
         }
 
-        const commits = await response.json()
-
-        const commitsByDate = commits.reduce((acc, commit) => {
-          const date = commit.commit.author.date.split('T')[0]
-          acc[date] = (acc[date] || 0) + 1
-          return acc
-        }, {})
-
-        this.commitData = Object.entries(commitsByDate)
-          .map(([date, count]) => ({
-            date,
-            commits: count
-          }))
-          .sort((a, b) => new Date(a.date) - new Date(b.date))
-
-        this.error = null
-        this.$nextTick(() => {
-          this.renderChart()
-        })
-      } catch (err) {
-        if (err.message === 'No commits found for this repository') {
-          this.error = 'No commits found for this repository.'
+        const commitData = await response.json();
+        
+        if (commitData.length !== 0) {
+          const dates = commitData.map(data => new Date(data.date).toLocaleDateString());
+          const commits = commitData.map(data => data.commits);
+          this.renderChart(dates, commits);
         } else {
-          this.error = 'Failed to load commit history. Please check the repository URL and try again.'
+          this.error = "No Commit History Found. Please Re-sync Commits.";
         }
-        console.error('Error fetching commit data:', err)
+
+      } catch (err) {
+        this.error = err.message;
+        console.error('Error loading chart data:', err);
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
-    renderChart() {
-      const canvas = this.$refs.chartCanvas
+   
+    renderChart(labels, data) {
+      const canvas = this.$refs.chartCanvas;
       if (!canvas) {
-        console.error('Canvas element not found')
-        return
+        console.error('Canvas element not found');
+        return;
       }
 
-      const ctx = canvas.getContext('2d')
+      const ctx = canvas.getContext('2d');
       if (!ctx) {
-        console.error('Could not get canvas context')
-        return
+        console.error('Could not get canvas context');
+        return;
       }
-      
+
       if (this.chart) {
-        this.chart.destroy()
+        this.chart.destroy();
       }
 
       try {
         this.chart = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: this.commitData.map(d => new Date(d.date).toLocaleDateString()),
+            labels,
             datasets: [{
               label: 'Number of Commits',
-              data: this.commitData.map(d => d.commits),
+              data,
               borderColor: '#2563eb',
               backgroundColor: 'rgba(37, 99, 235, 0.1)',
               borderWidth: 2,
@@ -147,7 +121,7 @@ export default {
                 intersect: false,
                 callbacks: {
                   label: function(context) {
-                    return `${context.parsed.y} commits`
+                    return `${context.parsed.y} commits`;
                   }
                 }
               }
@@ -173,38 +147,24 @@ export default {
               }
             }
           }
-        })
+        });
       } catch (err) {
-        console.error('Error creating chart:', err)
-        this.error = 'Failed to create chart'
+        console.error('Error creating chart:', err);
+        this.error = 'Failed to create chart';
       }
     }
   },
 
   mounted() {
-    if (typeof Chart === 'undefined') {
-      this.error = 'Chart.js library not found. Please ensure it is properly loaded.'
-      this.loading = false
-      return
-    }
-    this.fetchCommitData()
-  },
-
-  watch: {
-    repoUrl: {
-      handler() {
-        this.loading = true
-        this.fetchCommitData()
-      }
-    }
+    this.loadChartData();
   },
 
   beforeUnmount() {
     if (this.chart) {
-      this.chart.destroy()
+      this.chart.destroy();
     }
   }
-}
+};
 </script>
 
 <style scoped>

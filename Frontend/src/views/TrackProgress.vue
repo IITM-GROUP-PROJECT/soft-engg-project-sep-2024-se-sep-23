@@ -101,7 +101,7 @@
           </button>
         </div>
         <!-- GitHub Commit History Component -->
-        <GitHubCommitHistory :repo-url="project.github_repo_url" />
+        <GitHubCommitHistory :user-id=this.$route.params.studentId :repo-url="project.github_repo_url"  />
       </div>
     </div>
   </div>
@@ -177,9 +177,35 @@ export default {
         this.isEvaluating = false;
       }
     },
-    async resyncCommits() {
-      // Add logic here if needed for re-fetching commits
-      console.log("Resyncing commits...");
+    async resyncCommits() 
+    {
+      const urlParts = this.project.github_repo_url.split('/')
+      const owner = urlParts[urlParts.length - 2]
+      const repo = urlParts[urlParts.length - 1]
+     
+      const response = await fetch('http://127.0.0.1:5000/api/fetch-commits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json',
+             'Authorization': `Bearer ${localStorage.getItem('token')}`
+           },
+          body: JSON.stringify({
+            owner: owner,
+            repo: repo,
+            userId : this.$route.params.studentId
+          })
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch commits')
+        }
+        else
+        {
+          window.location.reload();
+        }
+       
+
+      
     },
     logout() {
       localStorage.removeItem('token');
