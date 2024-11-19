@@ -1,5 +1,6 @@
-## all routes should be defined here
+## major routes should be defined here
 
+# Importing required libraries
 from flask import Blueprint, jsonify, request
 from app.models import *
 from app.extensions import db
@@ -23,12 +24,14 @@ from datetime import datetime
 from pytz import timezone
 import requests
 
+# Set timezone to IST
 ist = timezone('Asia/Kolkata')
 
 import os
 
 api_routes = Blueprint("api", __name__)
 
+# API for Instructor Login
 @api_routes.route('/api/instructor_login', methods=['POST'])
 def instructor_login():
     try:
@@ -58,6 +61,7 @@ def instructor_login():
     except Exception as e:
         return jsonify({'message': 'Internal server error', 'error': str(e)}), 500
 
+# API for Student Login
 @api_routes.route('/api/student_login', methods=['POST'])
 def student_login():
     try:
@@ -87,6 +91,7 @@ def student_login():
     except Exception as e:
         return jsonify({'message': 'Internal server error', 'error': str(e)}), 500
 
+# API for Instructor Signup
 @api_routes.route('/api/instructor_signup', methods=['POST'])
 def instructor_signup():
     try:
@@ -130,6 +135,7 @@ def instructor_signup():
     except Exception as e:
         return jsonify({'message': 'Internal server error', 'error': str(e)}), 500
 
+# API for Student Signup
 @api_routes.route('/api/student_signup', methods=['POST'])
 def student_signup():
     try:
@@ -216,7 +222,7 @@ def get_courses():
     courses = Course.query.all()
     return jsonify([{'id': c.id, 'name': c.name} for c in courses])
 
-
+# API to create a new Project
 @api_routes.route('/api/create_project', methods=['POST'])
 @jwt_required()
 @instructor_required
@@ -263,6 +269,7 @@ def create_project():
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
+# API to edit a Project
 @api_routes.route('/api/edit_project/<int:project_id>', methods=['GET', 'PUT'])
 @jwt_required()
 @instructor_required
@@ -321,6 +328,7 @@ def edit_project(project_id):
     except Exception as e:
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
+# API to delete a Project
 @api_routes.route('/api/delete_project/<int:project_id>', methods=['DELETE'])
 @jwt_required()
 @instructor_required
@@ -696,3 +704,124 @@ def fetch_commits():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+from sqlalchemy import func
+
+# API: Project Stats
+@api_routes.route('/api/project_stats', methods=['GET'])
+def project_stats():
+    projects = Project.query.all()
+    project_stats_list = []
+
+    for project in projects:
+        # Total number of students in the project
+        total_students = StudentProject.query.filter_by(project_id=project.id).count()
+
+        # Number of milestones in the project
+        total_milestones = Milestone.query.filter_by(project_id=project.id).count()
+
+        # Number of students who have completed all milestones
+        student_projects = StudentProject.query.filter_by(project_id=project.id).all()
+        students_completed_all = 0
+        for sp in student_projects:
+            completed_milestones = StudentMilestone.query.filter_by(
+                student_id=sp.student_id,
+                project_id=project.id,
+                status='Completed'
+            ).count()
+            if completed_milestones == total_milestones and total_milestones > 0:
+                students_completed_all += 1
+
+        # Number of students who have submitted project reports
+        students_submitted_reports = StudentProject.query.filter(
+            StudentProject.project_id == project.id,
+            StudentProject.project_report.isnot(None)
+        ).count()
+
+        # Total number of commits for the project
+        total_commits = db.session.query(func.count(Commits.commit_id)).join(
+            StudentProject, Commits.student_project_id == StudentProject.id
+        ).filter(
+            StudentProject.project_id == project.id
+        ).scalar()
+
+        project_stats_list.append({
+            'project_id': project.id,
+            'project_title': project.title,
+            'total_students': total_students,
+            'total_milestones': total_milestones,
+            'students_completed_all_milestones': students_completed_all,
+            'students_submitted_reports': students_submitted_reports,
+            'total_commits': total_commits or 0
+        })
+
+    return jsonify({'project_stats': project_stats_list})
+ 
+# API: Student Stats
+@api_routes.route('/api/student_stats', methods=['GET'])
+def student_stats():
+    # Number of students who have completed all milestones in a project
+    completed_students_per_project = []
+
+    projects = Project.query.all()
+    for project in projects:
+        total_milestones = Milestone.query.filter_by(project_id=project.id).count()
+        if total_milestones == 0:
+            continue  # Skip projects with no milestones
+        student_projects = StudentProject.query.filter_by(project_id=project.id).all()
+        students_completed_all = 0
+        for sp in student_projects:
+            completed_milestones = StudentMilestone.query.filter_by(
+                student_id=sp.student_id,
+                project_id=project.id,
+                status='Completed'
+            ).count()
+            if completed_milestones == total_milestones:
+                students_completed_all += 1
+        completed_students_per_project.append({
+            'project_id': project.id,
+            'project_title': project.title,
+            'students_completed_all_milestones': students_completed_all
+        })
+
+    # Simplified: Students who haven't started any milestones
+    not_started_stats = []
+    projects = Project.query.all()
+    for project in projects:
+        student_projects = StudentProject.query.filter_by(project_id=project.id).all()
+        not_started_count = 0
+        for sp in student_projects:
+            milestone_count = StudentMilestone.query.filter_by(
+                student_id=sp.student_id,
+                project_id=project.id
+            ).count()
+            if milestone_count == 0:
+                not_started_count += 1
+        if not_started_count > 0:
+            not_started_stats.append({
+                'project_id': project.id,
+                'students_not_started': not_started_count
+            })
+
+    # Simplified: Students with incomplete reports
+    incomplete_reports_stats = []
+    for project in projects:
+        incomplete_count = StudentProject.query.filter_by(
+            project_id=project.id,
+            project_report=None
+        ).count()
+        if incomplete_count > 0:
+            incomplete_reports_stats.append({
+                'project_id': project.id,
+                'num_incomplete_reports': incomplete_count
+            })
+
+    # Aggregate stats
+    student_stats = {
+        'completed_students_per_project': completed_students_per_project,
+        'students_not_started_milestones': not_started_stats,
+        'incomplete_reports': incomplete_reports_stats
+    }
+    
+    return jsonify(student_stats)

@@ -3,6 +3,7 @@ from flask import jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from app.models import Instructor, Student
 
+# custom decorator for instructor required
 def instructor_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -13,6 +14,7 @@ def instructor_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
+# custom decorator for student required
 def student_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -23,6 +25,7 @@ def student_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
+# custom decorator for system admin required
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):

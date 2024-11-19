@@ -10,6 +10,8 @@ from config import setup_logging
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
+
+# Create the Flask app
 def create_app():
     app = Flask(__name__)
 
@@ -19,6 +21,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
 
+    # Register the blueprints
     app.register_blueprint(api_routes)
     app.register_blueprint(admin_routes, url_prefix='/api/admin')
     app.register_blueprint(professor_routes, url_prefix='/api')

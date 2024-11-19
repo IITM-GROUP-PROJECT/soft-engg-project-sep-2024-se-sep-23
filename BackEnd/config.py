@@ -8,6 +8,7 @@ from datetime import datetime
 
 load_dotenv()
 
+# Logging configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_DIRECTORY = "logs"
 
@@ -40,7 +41,7 @@ def setup_logging(app):
     app.logger.setLevel(LOG_LEVEL)
     app.logger.addHandler(handler)
 
-
+# app configuration
 class Config:
     SQLALCHEMY_DATABASE_URI = "sqlite:///data.sqlite3"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
