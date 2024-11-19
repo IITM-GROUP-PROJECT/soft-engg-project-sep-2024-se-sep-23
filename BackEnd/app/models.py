@@ -72,4 +72,4 @@ class Commits(db.Model):
     commit_message = db.Column(db.String(300), unique=False, nullable=True)
     commit_sha = db.Column(db.String(256), unique=True, nullable=False)
     commit_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    student_project_id = db.Column(db.Integer, db.ForeignKey('student_project.id'), nullable=False)

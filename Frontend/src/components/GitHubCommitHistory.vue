@@ -26,8 +26,8 @@ export default {
   name: 'GitHubCommitHistory',
   
   props: {
-    userId: {
-      type: String,
+    student_project_id: {
+      type: Number,
       required: true
     }
   },
@@ -46,7 +46,7 @@ export default {
       this.error = null;
 
       try {
-        const response = await fetch(`http://127.0.0.1:5000/api/get-commit-data?userId=${this.userId}`,{
+        const response = await fetch(`http://127.0.0.1:5000/api/get-commit-data?student_project_id=${this.student_project_id}`,{
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

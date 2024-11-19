@@ -120,7 +120,7 @@
           </button>
         </div>
         <!-- GitHub Commit History Component -->
-        <GitHubCommitHistory :user-id=this.$route.params.studentId :repo-url="project.github_repo_url"  />
+        <GitHubCommitHistory v-if="project.student_project_id" :student_project_id="project.student_project_id" :repo-url="project.github_repo_url"  />
       </div>
     </div>
   </div>
@@ -170,6 +170,8 @@ export default {
     },
     async fetchExistingEvaluation() {
       try {
+        console.log('Fetching existing evaluation');
+        console.log('Student project ID:', this.project.student_project_id);
         const response = await fetch(`http://127.0.0.1:5000/api/ai_eval/${this.project.student_project_id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -228,6 +230,7 @@ export default {
     },
     async resyncCommits()
     {
+      console.log(this.project.student_project_id)
       const urlParts = this.project.github_repo_url.split('/')
       const owner = urlParts[urlParts.length - 2]
       const repo = urlParts[urlParts.length - 1]
@@ -240,7 +243,7 @@ export default {
           body: JSON.stringify({
             owner: owner,
             repo: repo,
-            userId : this.$route.params.studentId
+            student_project_id : this.project.student_project_id
           })
         })
 
@@ -261,9 +264,18 @@ export default {
       this.$router.push(`/project/${this.$route.params.projectId}`);
     },
   },
+  watch: {
+    'project.student_project_id': {
+      handler(newVal) {
+        if (newVal) {
+          this.fetchExistingEvaluation();
+        }
+      },
+      immediate: false
+    }
+  },
   created() {
     this.fetchProgress();
-    this.fetchExistingEvaluation();
   },
   computed: {
     renderedEvaluation() {

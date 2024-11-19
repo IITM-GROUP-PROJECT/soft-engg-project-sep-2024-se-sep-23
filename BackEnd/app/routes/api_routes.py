@@ -21,6 +21,7 @@ import google.generativeai as genai
 
 from datetime import datetime
 from pytz import timezone
+import requests
 
 ist = timezone('Asia/Kolkata')
 
@@ -629,17 +630,17 @@ def get_ai_evaluation(student_project_id):
 @jwt_required()
 @instructor_required
 def get_commit_data():
-    user_id = request.args.get('userId')
+    student_project_id = request.args.get('student_project_id')
 
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
+    if not student_project_id:
+        return jsonify({"error": "Student-Project ID is required"}), 400
 
     try:
 
         commit_data = db.session.query(
             func.date(Commits.commit_date).label('commit_date'),
             func.count(Commits.commit_id).label('commit_count')
-        ).filter_by(user_id=user_id).group_by(func.date(Commits.commit_date)).all()
+        ).filter_by(student_project_id=student_project_id).group_by(func.date(Commits.commit_date)).all()
         formatted_data = [
             {"date": commit_date, "commits": commit_count}
             for commit_date, commit_count in commit_data
@@ -655,7 +656,7 @@ def fetch_commits():
     data = request.json
     owner = data.get('owner')
     repo = data.get('repo')
-    user_id = data.get('userId')
+    student_project_id = data.get('student_project_id')
     try:
 
         headers =\
@@ -685,7 +686,7 @@ def fetch_commits():
                     commit_message=message,
                     commit_sha=sha,
                     commit_date=datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ"),
-                    user_id=user_id
+                    student_project_id=student_project_id
                 )
                 db.session.add(new_commit)
                 print(new_commit)
