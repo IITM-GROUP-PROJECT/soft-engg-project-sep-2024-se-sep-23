@@ -6,7 +6,7 @@ from app.models import *
 from app.extensions import db
 from app.services.project_services import ProjectService
 from app.decorators import instructor_required, student_required, admin_required
-
+from sqlalchemy import func, case, and_, text
 from flask import *
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -28,6 +28,8 @@ import requests
 ist = timezone('Asia/Kolkata')
 
 import os
+
+# from BackEnd.app.models import *
 
 api_routes = Blueprint("api", __name__)
 
@@ -622,6 +624,54 @@ def ai_evaluation(student_project_id):
         return jsonify({
             'error': str(e)
         }), 500
+
+
+@api_routes.route('/api/stats', methods=['GET'])
+@jwt_required()
+def get_instructor_projects():
+    # Fetch the current instructor's ID from JWT
+    instructor_id = get_jwt_identity()
+
+    # Fetch projects for the current instructor
+    projects = Project.query.filter_by(instructor_id=instructor_id).all()
+
+    projects_data = []
+    for project in projects:
+        # Prepare project data
+        project_info = {
+            'id': project.id,
+            'title': project.title,
+            'course': {
+                'id': project.course.id,
+                'name': project.course.name
+            },
+            'students': [],
+            'milestones': []
+        }
+
+        # Add student details
+        for student_project in project.students:
+            student_info = {
+                'id': student_project.student.id,
+                'email': student_project.student.email,
+                'github_repo_url': student_project.github_repo_url,
+                'status': 'In Progress'  # Modify logic as needed
+            }
+            project_info['students'].append(student_info)
+
+        # Add milestone details
+        for milestone in project.milestones:
+            milestone_info = {
+                'id': milestone.id,
+                'title': milestone.title,
+                'deadline': milestone.deadline.isoformat(),
+                'status': 'Completed' if milestone.student_milestones else 'Pending'
+            }
+            project_info['milestones'].append(milestone_info)
+
+        projects_data.append(project_info)
+
+    return jsonify(projects_data)
 
 @api_routes.route('/api/ai_eval/<int:student_project_id>', methods=['GET'])
 @jwt_required()

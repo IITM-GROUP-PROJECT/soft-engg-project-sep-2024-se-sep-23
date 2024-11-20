@@ -16,6 +16,7 @@ import CreateProject from '../views/CreateProject.vue';
 import ProjectDetails from '../views/ProjectDetails.vue';
 import EditProject from '../views/EditProject.vue';
 import TrackProgress from '../views/TrackProgress.vue';
+import InstructorStats from '../views/InstructorStats.vue'
 
 
 Vue.use(Router);
@@ -86,5 +87,11 @@ export default new Router({
     component: EditProject,
     props: true
   },
+  {
+    path: '/instructor_stats',
+    name: 'InstructorStats',
+    component: InstructorStats,
+    props: true
+  }
   ]
 });
