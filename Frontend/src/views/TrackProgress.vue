@@ -82,11 +82,14 @@
                 <i class="far fa-clock"></i>
                 Submitted: {{ new Date(project.report_created_at).toLocaleString() }}
               </div>
+              <div v-if="downloadError" class="error-message">
+                {{ downloadError }}
+              </div>
               {{ project.project_report }}
             </div>
           </div>
-          <button  @click="downloadPdf" class="btn" style="color:brown">
-             Download PDF
+          <button @click="downloadPdf" class="btn" style="color:brown">
+            Download PDF
           </button>
         </div>
       </div>
@@ -151,12 +154,13 @@ export default {
       aiEvaluation: null,
       evaluationDate: null,
       isEvaluating: false,
-      evaluationError: null
+      evaluationError: null,
+      downloadError: null
     };
   },
   methods: {
     async downloadPdf() {
-      
+      this.downloadError = null;
       try {
         const response = await fetch(this.project.report_url, {
           method: 'GET',
@@ -164,17 +168,19 @@ export default {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },
         });
-
+    
+        if (response.status === 404) {
+          this.downloadError = "Report not submitted";
+          return;
+        }
+    
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-
     
         const blob = await response.blob();
-
-        
         const url = window.URL.createObjectURL(blob);
-         const link = document.createElement("a");
+        const link = document.createElement("a");
         link.href = url;
         link.setAttribute("download", "ProjectReport.pdf"); 
         document.body.appendChild(link);
@@ -183,6 +189,7 @@ export default {
         window.URL.revokeObjectURL(url);
       } catch (error) {
         console.error("Error downloading the file:", error);
+        this.downloadError = "Error downloading the file";
       }
     },
     async fetchProgress() {
@@ -552,6 +559,15 @@ h3 {
 .resource-item label {
   color: #666;
   font-weight: 500;
+}
+
+.error-message {
+  color: #dc3545;
+  margin: 10px 0;
+  padding: 8px;
+  background-color: #fff5f5;
+  border-radius: 4px;
+  font-size: 0.9rem;
 }
 
 .repo-url {

@@ -495,7 +495,24 @@ def update_project_info(project_id):
 def project_report(project_id, student_id):
     fileName = str(project_id) + "_" + str(student_id) + "_projectReport.pdf"
     file_path = os.path.join(GET_UPLOAD_FOLDER, fileName)
-    return send_file(file_path, as_attachment=True)
+
+    try:
+        return send_file(file_path, as_attachment=True)
+    except FileNotFoundError:
+        return {"message": "Report not submitted"}, 404
+
+@api_routes.route('/api/project_info/student/project_report/<int:project_id>', methods=['GET'])
+@jwt_required()
+@student_required
+def project_report_student(project_id):
+    student_id = Student.query.filter_by(email=get_jwt_identity()).first().id
+    fileName = str(project_id) + "_" + str(student_id) + "_projectReport.pdf"
+    file_path = os.path.join(GET_UPLOAD_FOLDER, fileName)
+
+    try:
+        return send_file(file_path, as_attachment=True)
+    except FileNotFoundError:
+        return {"message": "Report not submitted"}, 404
 
 
 # API to get Project Details for an Instructor

@@ -86,9 +86,20 @@
                 type="file"
                 id="project_report"
                 @change="handleFileUpload"
-                class="form-control"
+                class="form-control" 
                 accept="application/pdf"
               />
+              <div class="mt-3">
+                <div v-if="downloadError" class="error-message">
+                  {{ downloadError }}
+                </div>
+                <button v-if="project.project_report" @click="downloadPdf" class="btn btn-brown">
+                  <i class="fas fa-download"></i> Download Existing Report
+                </button>
+                <div v-else class="text-muted">
+                  You have not submitted a report yet.
+                </div>
+              </div>
             </div>
 
             <button @click="saveChanges" class="save-btn">
@@ -108,12 +119,14 @@ export default {
   name: 'ProjectInfo',
   data() {
     return {
+      downloadError: null,
       project: {
         title: '',
         problem: '',
         course: '',
         milestones: [],
-        github_repo_url: ''
+        github_repo_url: '',
+        project_report: null,
       }
     };
   },
@@ -144,6 +157,38 @@ export default {
     handleFileUpload(event) {
       this.project.project_report_pdf = event.target.files[0];  
     },
+    async downloadPdf() {
+      this.downloadError = null;
+      try {
+        const response = await fetch(`http://127.0.0.1:5000/api/project_info/student/project_report/${this.$route.params.id}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+
+        if (response.status === 404) {
+          this.downloadError = "Report not submitted";
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "ProjectReport.pdf");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Error downloading the file:", error);
+        this.downloadError = "Error downloading the file";
+      }
+    },
     async saveChanges() {
       try {
         const projectId = this.$route.params.id;
@@ -161,6 +206,7 @@ export default {
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
+        window.location.reload();
         alert('Project info saved successfully!');
       } catch (error) {
         console.error('Error saving project info:', error);
@@ -448,6 +494,38 @@ export default {
 textarea.form-control {
   resize: vertical;
   min-height: 120px;
+}
+
+.error-message {
+  color: #dc3545;
+  margin: 10px 0;
+  padding: 8px;
+  background-color: #fff5f5;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.btn-brown {
+  background-color: #791912;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-brown:hover {
+  background-color: #5d130e;
+}
+
+.text-muted {
+  color: #6c757d;
+  margin-top: 8px;
+}
+
+.mt-3 {
+  margin-top: 1rem;
 }
 
 .save-btn {
