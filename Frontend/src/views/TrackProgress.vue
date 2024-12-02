@@ -85,6 +85,9 @@
               {{ project.project_report }}
             </div>
           </div>
+          <button  @click="downloadPdf" class="btn" style="color:brown">
+             Download PDF
+          </button>
         </div>
       </div>
 
@@ -152,6 +155,36 @@ export default {
     };
   },
   methods: {
+    async downloadPdf() {
+      
+      try {
+        const response = await fetch(this.project.report_url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+    
+        const blob = await response.blob();
+
+        
+        const url = window.URL.createObjectURL(blob);
+         const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "ProjectReport.pdf"); 
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Error downloading the file:", error);
+      }
+    },
     async fetchProgress() {
       try {
         const response = await fetch(`http://127.0.0.1:5000/api/track_progress/${this.$route.params.projectId}/${this.$route.params.studentId}`, {

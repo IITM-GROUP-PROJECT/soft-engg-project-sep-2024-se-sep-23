@@ -1,17 +1,16 @@
 ## major routes should be defined here
+import json
 
 # Importing required libraries
-from flask import Blueprint, jsonify, request
 from app.models import *
 from app.extensions import db
 from app.services.project_services import ProjectService
-from app.decorators import instructor_required, student_required, admin_required
-from sqlalchemy import func, case, and_, text
+from app.decorators import instructor_required, student_required
 from flask import *
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
-from sqlalchemy import func
+import fitz
 
 
 import re
@@ -30,6 +29,9 @@ ist = timezone('Asia/Kolkata')
 import os
 
 # from BackEnd.app.models import *
+GET_UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = 'app/uploads'
+ALLOWED_EXTENSIONS = {'pdf'}
 
 api_routes = Blueprint("api", __name__)
 
@@ -390,17 +392,25 @@ def get_project_info(project_id):
     }), 200
 
 
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def convert_pdf_to_text(pdf_path):
+    pdf_text = ""
+    doc = fitz.open(pdf_path)
+    for page_num in range(doc.page_count):
+        page = doc.load_page(page_num)
+        pdf_text += page.get_text()
+    return pdf_text
+
 # API to update Project Info for a Student
 @api_routes.route('/api/project_info/<int:project_id>', methods=['POST'])
 @jwt_required()
 @student_required
 def update_project_info(project_id):
     try:
-        # Validate JSON request
-        if not request.is_json:
-            return jsonify({'message': 'Missing JSON in request'}), 400
-
-        data = request.json
+        data = json.loads(request.form.get('data'))
 
         # Validate required data
         if 'milestones' not in data:
@@ -431,10 +441,18 @@ def update_project_info(project_id):
         if not student_project:
             return jsonify({'message': 'Project not found or not assigned to student'}), 404
 
-        # Update project report if provided
-        if 'project_report' in data:
-            student_project.project_report = data['project_report']
-            student_project.report_created_at = datetime.now(ist)
+
+        if 'project_report' in request.files:
+            file = request.files['project_report']
+            if file and allowed_file(file.filename):
+                if not os.path.exists(UPLOAD_FOLDER):
+                    os.makedirs(UPLOAD_FOLDER)
+                fileName = str(project_id) + "_" + str(student.id) + "_projectReport.pdf"
+                file_path = os.path.join(UPLOAD_FOLDER,fileName)
+                file.save(file_path)
+                pdf_text = convert_pdf_to_text(file_path)
+                student_project.project_report = pdf_text
+                student_project.report_created_at = datetime.now(ist)
 
         # Update milestones
         for milestone_data in data['milestones']:
@@ -468,6 +486,16 @@ def update_project_info(project_id):
             'message': 'Internal server error',
             'error': str(e)
         }), 500
+
+
+
+@api_routes.route('/api/project_info/project_report/<int:project_id>/<int:student_id>', methods=['GET'])
+@jwt_required()
+@instructor_required
+def project_report(project_id, student_id):
+    fileName = str(project_id) + "_" + str(student_id) + "_projectReport.pdf"
+    file_path = os.path.join(GET_UPLOAD_FOLDER, fileName)
+    return send_file(file_path, as_attachment=True)
 
 
 # API to get Project Details for an Instructor
@@ -552,7 +580,8 @@ def track_progress(project_id, student_id):
         'github_repo_url': student_project.github_repo_url,
         'project_report': student_project.project_report,
         'report_created_at': report_created_at,
-        'student_project_id': student_project.id
+        'student_project_id': student_project.id,
+        'report_url' : "http://127.0.0.1:5000/api/project_info/project_report/"+ str(project_id) + "/" + str(student_id)
     }), 200
 
 

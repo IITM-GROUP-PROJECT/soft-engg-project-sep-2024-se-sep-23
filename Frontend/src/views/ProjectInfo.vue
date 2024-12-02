@@ -81,14 +81,14 @@
             </div>
 
             <div class="form-group">
-              <label for="project_report">Project Report</label>
-              <textarea 
-                v-model="project.project_report" 
-                class="form-control" 
+              <label for="project_report">Upload Project Report (PDF)</label>
+              <input 
+                type="file"
                 id="project_report"
-                rows="6"
-                placeholder="Write your project report..."
-              ></textarea>
+                @change="handleFileUpload"
+                class="form-control"
+                accept="application/pdf"
+              />
             </div>
 
             <button @click="saveChanges" class="save-btn">
@@ -113,8 +113,7 @@ export default {
         problem: '',
         course: '',
         milestones: [],
-        github_repo_url: '',
-        project_report: ''
+        github_repo_url: ''
       }
     };
   },
@@ -142,16 +141,22 @@ export default {
         milestone.status = 'Completed';
       }
     },
+    handleFileUpload(event) {
+      this.project.project_report_pdf = event.target.files[0];  
+    },
     async saveChanges() {
       try {
         const projectId = this.$route.params.id;
+        const formData = new FormData();
+        formData.append('project_report', this.project.project_report_pdf); 
+        formData.append('data', JSON.stringify(this.project)); 
+
         const response = await fetch(`http://127.0.0.1:5000/api/project_info/${projectId}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
-          body: JSON.stringify(this.project)
+          body: formData
         });
         if (!response.ok) {
           throw new Error('Network response was not ok');
@@ -164,9 +169,10 @@ export default {
     logout() {
       localStorage.removeItem('token');
       this.$router.push('/');
-    }, goBack() {
-    this.$router.push('/student_dashboard');
-  }
+    },
+    goBack() {
+      this.$router.push('/student_dashboard');
+    }
   },
   created() {
     this.fetchProjectInfo();
