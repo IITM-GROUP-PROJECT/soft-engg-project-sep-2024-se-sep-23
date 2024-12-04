@@ -1,7 +1,7 @@
 #app configureation and initialization
 
 from flask import Flask
-from .extensions import db, migrate
+from .extensions import db, migrate, mail
 from config import Config
 from .routes.api_routes import api_routes
 from .routes.admin_routes import admin_routes
@@ -20,6 +20,7 @@ def create_app():
     
     db.init_app(app)
     migrate.init_app(app, db)
+    mail.init_app(app)
 
     # Register the blueprints
     app.register_blueprint(api_routes)

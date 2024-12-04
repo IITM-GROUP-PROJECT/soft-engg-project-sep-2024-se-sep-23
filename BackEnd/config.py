@@ -47,3 +47,15 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.getenv("SECRET_KEY","SAF1AFDGGWE231A1AVPPROTJQMVRRW0PS76GH3PPTW1WAFN2GWQMVLTY041")
     JWT_SECRET_KEY = 'super-secret'
+
+    # Flask-Mail configuration
+    MAIL_SERVER = 'smtp.gmail.com'
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = 'projectmanagementiitmadras@gmail.com'
+    MAIL_PASSWORD = 'jboevrqvsojvyxiw'
+    MAIL_DEFAULT_SENDER = 'projectmanagementiitmadras@gmail.com'
+
+    # Celery configuration
+    CELERY_BROKER_URL = 'redis://localhost:6379/0'
+    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'

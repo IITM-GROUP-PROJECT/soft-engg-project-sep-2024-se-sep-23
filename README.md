@@ -59,7 +59,18 @@ The app's folder structure is organized as follows:
          ```bash
          flask db upgrade
          ```
-4. **Run the backend server**:
+
+4. **Start Redis Server (in a new terminal)**:
+    ```bash
+    redis-server
+    ```
+
+5. **Start Celery Worker (in a new terminal inside the BackEnd directory)**:
+    ```bash
+    celery -A celery_app.celery worker --loglevel=info
+    ```
+
+6. **Run the backend server**:
     ```bash
     python run.py
     ```

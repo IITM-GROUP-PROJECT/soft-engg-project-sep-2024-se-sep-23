@@ -163,7 +163,8 @@ export default {
     parseCSV(content) {
       Papa.parse(content, {
         complete: (result) => {
-          this.selectedStudents = result.data.map((row) => row[0]); // Assuming the first column contains student IDs or relevant data
+          // Assuming first column contains email addresses
+          this.selectedStudents = result.data.map(row => row[0].trim()).filter(Boolean);
         },
         header: false, // Set to true if the CSV has headers
       });
@@ -190,11 +191,39 @@ export default {
     },
     async createProject() {
       try {
+        // First get student IDs for the emails
+        const emailResponse = await fetch("http://127.0.0.1:5000/api/get_student_ids", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ emails: this.selectedStudents })
+        });
+
+        if (!emailResponse.ok) {
+          throw new Error("Failed to process student emails");
+        }
+
+        const emailData = await emailResponse.json();
         
-        const projectData = {
+        // Send registration reminders for unregistered emails
+        if (emailData.unregistered_emails.length > 0) {
+          await fetch("http://127.0.0.1:5000/api/send_reminder_to_register", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            body: JSON.stringify({ emails: emailData.unregistered_emails })
+          });
+        }
+        
+         // Create project with registered student IDs
+         const projectData = {
           title: this.title,
           problem: this.problem,
-          student_ids: this.selectedStudents,
+          student_ids: emailData.registered_student_ids,
           milestones: this.milestones,
           new_course: this.selectedCourse === 'new',
           course_id: this.selectedCourse === 'new' ? null : this.selectedCourse,

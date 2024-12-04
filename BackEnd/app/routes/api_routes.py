@@ -209,7 +209,7 @@ def instructor_dashboard():
     } for project in projects]), 200
 
 
-# API to get list of all Students needed to create a new Project
+# API to get list of all Students needed to create a new Project (no longer needed, modified to csv instead of checklist)
 @api_routes.route('/api/students', methods=['GET'])
 @jwt_required()
 def get_students():
@@ -218,6 +218,58 @@ def get_students():
         'id': student.id,
         'email': student.email
     } for student in students]), 200
+
+# API to convert emails to IDs for project creation.
+@api_routes.route('/api/get_student_ids', methods=['POST'])
+@jwt_required()
+@instructor_required
+def get_student_ids():
+    try:
+        data = request.get_json()
+        if not data or 'emails' not in data:
+            return jsonify({'message': 'Missing emails list'}), 400
+            
+        emails = data['emails']
+        registered_students = []
+        unregistered_emails = []
+        
+        for email in emails:
+            student = Student.query.filter_by(email=email).first()
+            if student:
+                registered_students.append(student.id)
+            else:
+                unregistered_emails.append(email)
+                
+        return jsonify({
+            'registered_student_ids': registered_students,
+            'unregistered_emails': unregistered_emails
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'message': 'Internal server error', 'error': str(e)}), 500
+
+# API to send reminders to students not registered on the app to register on the portal
+@api_routes.route('/api/send_reminder_to_register', methods=['POST'])
+@jwt_required()
+@instructor_required
+def send_reminder_to_register():
+    try:
+        data = request.get_json()
+        if not data or 'emails' not in data:
+            return jsonify({'message': 'Missing emails list'}), 400
+            
+        emails = data['emails']
+
+        from app.tasks import send_email
+        send_email.delay('Final Reminder to Register', emails, 'Please register at the earlier on the IIT Madras Project Portal otherwise you will miss out on Project this term.')
+        
+        return jsonify({
+            'message': 'Registration reminders sent successfully',
+            'emails': data['emails']
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'message': 'Internal server error', 'error': str(e)}), 500
 
 # API to get list of all Courses needed to create a new Project
 @api_routes.route('/api/courses', methods=['GET'])
