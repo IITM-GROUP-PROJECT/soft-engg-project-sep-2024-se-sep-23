@@ -44,9 +44,22 @@ flask db migrate
 flask db upgrade
 ```
 ## Running the Application
-```bash
-python run.py
-```
+
+1. **Start Redis Server (in a new terminal)**:
+    ```bash
+    redis-server
+    ```
+
+2. **Start Celery Worker (in a new terminal inside the BackEnd directory)**:
+    ```bash
+    celery -A celery_app.celery worker --loglevel=info
+    ```
+
+3. **Run the backend server**:
+    ```bash
+    python run.py
+    ```
+
 
 ## API Documentation
 

@@ -24,7 +24,7 @@ The app's folder structure is organized as follows:
 
 1. **Navigate to the frontend directory**:
     ```bash
-    cd Frontend/vue-flask-app
+    cd Frontend
     ```
 2. **Install frontend dependencies**:
     ```bash
