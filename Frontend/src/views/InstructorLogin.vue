@@ -74,6 +74,8 @@ export default {
       .then(data => {
         if (data.access_token) {
           localStorage.setItem('token', data.access_token);
+          console.log('Stored instructorId in localStorage:', data.instructor_id);
+          localStorage.setItem('instructor_id', data.instructor_id);
           alert('Login successful');
           this.$router.push('/instructor_dashboard');
         } else {

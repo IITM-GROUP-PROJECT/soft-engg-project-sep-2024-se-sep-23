@@ -10,6 +10,10 @@
           <i class="fas fa-sign-out-alt"></i>
           Logout
         </button>
+        <button @click="viewStats()" class="stats-btn">
+          <i class="fas fa-chart-bar"></i>
+          Stats
+        </button>
       </div>
     </nav>
 
@@ -93,6 +97,10 @@ export default {
     createProject() {
       this.$router.push('/create_project');
     },
+    viewStats() {
+      const instructorId = localStorage.getItem('instructor_id')
+      console.log("Retrieved instructorId:",instructorId)
+      this.$router.push(`/instructor_stats/${instructorId}`)},
     logout() {
       localStorage.removeItem('token');
       this.$router.push('/');
@@ -159,6 +167,44 @@ export default {
   background-color: #791912;
   color: white;
 }
+
+.stats-btn {
+  display: inline-flex;
+  position: absolute;
+  top: 3px;
+  right: 0;
+  margin: 10px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.70rem 1rem;
+  background: linear-gradient(90deg, #ffffff, #ffffff); /* Green gradient */
+  color: #791912;
+  border: #791912 1px solid;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  /* box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); */
+}
+
+.stats-btn i {
+  font-size: 1.2rem;
+}
+
+.stats-btn:hover {
+  background: linear-gradient(90deg, #7b1d17, #791912); /* Slightly darker green gradient */
+  transform: translateY(-2px);
+  color: white;
+  /* box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); */
+}
+
+.stats-btn:active {
+  transform: translateY(0);
+  /* box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); */
+}
+
 
 .dashboard-container {
   max-width: 1400px;

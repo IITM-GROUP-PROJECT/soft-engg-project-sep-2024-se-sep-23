@@ -28,35 +28,38 @@
 
       <div v-else class="content">
         <!-- Project Info Card -->
-        <!-- Update the Project Info Card section -->
-          <div class="section-card project-info-card">
-            <div class="card-header">
-              <div class="title-section">
-                <h2>{{ project.title }}</h2>
-                <div class="course-badge">{{ project.course }}</div>
-              </div>
-              <div class="action-buttons">
-                <button @click="editProject" class="edit-btn">
-                  <i class="fas fa-edit"></i>
-                  Edit Project
-                </button>
-                <button @click="deleteProject" class="delete-btn">
-                  <i class="fas fa-trash"></i>
-                  Delete
-                </button>
-              </div>
+        <div class="section-card project-info-card">
+          <div class="card-header">
+            <div class="title-section">
+              <h2>{{ project.title }}</h2>
+              <div class="course-badge">{{ project.course }}</div>
             </div>
-            <div class="problem-statement">
-              <h3>Problem Statement</h3>
-              <p>{{ project.problem }}</p>
+            <div class="action-buttons">
+              <button @click="editProject" class="edit-btn">
+                <i class="fas fa-edit"></i>
+                Edit Project
+              </button>
+              <button @click="deleteProject" class="delete-btn">
+                <i class="fas fa-trash"></i>
+                Delete
+              </button>
             </div>
           </div>
+          <div class="problem-statement">
+            <h3>Problem Statement</h3>
+            <p>{{ project.problem }}</p>
+          </div>
+        </div>
 
         <!-- Milestones Section -->
         <div class="section-card">
           <h3><i class="fas fa-tasks"></i> Project Milestones</h3>
           <div class="milestones-list">
-            <div v-for="(milestone, index) in project.milestones" :key="milestone.id || index" class="milestone-card">
+            <div
+              v-for="(milestone, index) in project.milestones"
+              :key="milestone.id || index"
+              class="milestone-card"
+            >
               <div class="milestone-number">#{{ index + 1 }}</div>
               <div class="milestone-content">
                 <p class="milestone-text">{{ milestone.title }}</p>
@@ -74,12 +77,21 @@
         <div class="section-card">
           <h3><i class="fas fa-users"></i> Assigned Students</h3>
           <div class="search-container">
-            <input type="text" class="search-bar" placeholder="Search Students..." v-model="searchQuery">
+            <input
+              type="text"
+              class="search-bar"
+              placeholder="Search Students..."
+              v-model="searchQuery"
+            />
             <i class="fas fa-search search-icon"></i>
           </div>
 
           <div class="students-grid">
-            <div v-for="student in project.students" :key="student.id" class="student-card">
+            <div
+              v-for="student in filteredStudents"
+              :key="student.id"
+              class="student-card"
+            >
               <div class="student-info">
                 <i class="fas fa-user-graduate"></i>
                 <span>{{ student.email }}</span>
@@ -91,46 +103,57 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 </template>
 
-
 <script>
 export default {
-  name: 'ProjectDetails',
+  name: "ProjectDetails",
   data() {
     return {
       project: {
-        title: '',
-        problem: '',
+        title: "",
+        problem: "",
         milestones: [],
-        students: []
+        students: [],
       },
-      loading: true
+      loading: true,
+      searchQuery: "", // Add searchQuery to the data object
     };
+  },
+  computed: {
+    filteredStudents() {
+      // Filter students based on the search query
+      const query = this.searchQuery.toLowerCase();
+      return this.project.students.filter((student) =>
+        student.email.toLowerCase().includes(query)
+      );
+    },
   },
   methods: {
     goBack() {
-      this.$router.push('/instructor_dashboard');
+      this.$router.push("/instructor_dashboard");
     },
     async fetchProjectDetails() {
       this.loading = true;
       try {
-        const response = await fetch(`http://127.0.0.1:5000/api/project_details/${this.$route.params.projectId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        const response = await fetch(
+          `http://127.0.0.1:5000/api/project_details/${this.$route.params.projectId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
           }
-        });
+        );
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          throw new Error("Network response was not ok");
         }
         const data = await response.json();
         this.project = data;
       } catch (error) {
-        console.error('Error fetching project details:', error);
+        console.error("Error fetching project details:", error);
       } finally {
         this.loading = false;
       }
@@ -139,38 +162,44 @@ export default {
       this.$router.push(`/edit_project/${this.$route.params.projectId}`);
     },
     async deleteProject() {
-      if (confirm('Are you sure you want to delete this project?')) {
+      if (confirm("Are you sure you want to delete this project?")) {
         try {
-          const response = await fetch(`http://127.0.0.1:5000/api/delete_project/${this.$route.params.projectId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+          const response = await fetch(
+            `http://127.0.0.1:5000/api/delete_project/${this.$route.params.projectId}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
             }
-          });
+          );
           if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error("Network response was not ok");
           }
           const data = await response.json();
           alert(data.msg);
-          this.$router.push('/instructor_dashboard');
+          this.$router.push("/instructor_dashboard");
         } catch (error) {
-          console.error('Error deleting project:', error);
+          console.error("Error deleting project:", error);
         }
       }
     },
     trackProgress(studentId) {
-      this.$router.push(`/track_progress/${this.$route.params.projectId}/${studentId}`);
+      this.$router.push(
+        `/track_progress/${this.$route.params.projectId}/${studentId}`
+      );
     },
     logout() {
-      localStorage.removeItem('token');
-      this.$router.push('/');
-    }
+      localStorage.removeItem("token");
+      this.$router.push("/");
+    },
   },
   created() {
     this.fetchProjectDetails();
-  }
+  },
 };
 </script>
+
 
 <style scoped>
 /* Add these styles in the <style scoped> section */

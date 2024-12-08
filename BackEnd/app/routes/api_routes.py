@@ -10,6 +10,8 @@ from flask import *
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
+from sqlalchemy import func
+from collections import defaultdict
 import fitz
 
 
@@ -58,7 +60,7 @@ def instructor_login():
                 identity=user.email,
                 expires_delta=timedelta(seconds=900)
             )
-            return jsonify({'access_token': access_token}), 200
+            return jsonify({'access_token': access_token,  'instructor_id': user.id}), 200
         except Exception as e:
             return jsonify({'message': 'Error creating access token', 'error': str(e)}), 500
 
@@ -850,126 +852,113 @@ def fetch_commits():
         db.session.commit()
         return jsonify({"message": "Commits fetched and stored successfully"}), 200
 
-    except Exception as e:
+    except Exception as e:  
         return jsonify({"error": str(e)}), 500
     
 
-from sqlalchemy import func
 
-# API: Project Stats
-@api_routes.route('/api/project_stats', methods=['GET'])
-def project_stats():
-    projects = Project.query.all()
-    project_stats_list = []
 
-    for project in projects:
-        # Total number of students in the project
-        total_students = StudentProject.query.filter_by(project_id=project.id).count()
+@api_routes.route('/api/instructor_stats/<int:instructor_id>', methods=['GET'])
+def instructor_stats(instructor_id):
 
-        # Number of milestones in the project
-        total_milestones = Milestone.query.filter_by(project_id=project.id).count()
+    # Fetch data from the database
+    courses = (
+        Course.query
+        .join(Project, Course.id == Project.course_id)
+        .filter(Project.instructor_id == instructor_id)
+        .distinct()
+        .all()
+    )
+    total_courses = len(courses)
+    total_projects = Project.query.count()
+    total_students = Student.query.count()
+    print("Total courses:", total_courses, "Total projects:", total_projects,"Total students:" ,total_students)
+    course_data = []
+    for course in courses:
+        course_projects = Project.query.filter_by(course_id=course.id).all()
+        course_project_data = []
+        for project in course_projects:
+            milestones = Milestone.query.filter_by(project_id=project.id).all()
+            students = StudentProject.query.filter_by(project_id=project.id).all()
 
-        # Number of students who have completed all milestones
-        student_projects = StudentProject.query.filter_by(project_id=project.id).all()
-        students_completed_all = 0
-        for sp in student_projects:
-            completed_milestones = StudentMilestone.query.filter_by(
-                student_id=sp.student_id,
-                project_id=project.id,
-                status='Completed'
-            ).count()
-            if completed_milestones == total_milestones and total_milestones > 0:
-                students_completed_all += 1
+            # Create a dictionary to hold stats per milestone title
+            milestone_stats = defaultdict(lambda: {"completed": 0, "pending": 0, "deadline": None})
 
-        # Number of students who have submitted project reports
-        students_submitted_reports = StudentProject.query.filter(
-            StudentProject.project_id == project.id,
-            StudentProject.project_report.isnot(None)
-        ).count()
+            # Iterate over milestones to get stats and deadlines
+            for milestone in milestones:
+                milestone_title = milestone.title
+                milestone_id = milestone.id
+                milestone_deadline = milestone.deadline.strftime('%a, %d %b %Y %H:%M:%S GMT')  # Get milestone deadline
 
-        # Total number of commits for the project
-        total_commits = db.session.query(func.count(Commits.commit_id)).join(
-            StudentProject, Commits.student_project_id == StudentProject.id
-        ).filter(
-            StudentProject.project_id == project.id
-        ).scalar()
+                # Count completed and pending for the milestone from StudentMilestone table
+                completed_count = StudentMilestone.query.filter_by(
+                    milestone_id=milestone_id, project_id=project.id, status="Completed"
+                ).count()
 
-        project_stats_list.append({
-            'project_id': project.id,
-            'project_title': project.title,
-            'total_students': total_students,
-            'total_milestones': total_milestones,
-            'students_completed_all_milestones': students_completed_all,
-            'students_submitted_reports': students_submitted_reports,
-            'total_commits': total_commits or 0
+                pending_count = StudentMilestone.query.filter_by(
+                    milestone_id=milestone_id, project_id=project.id, status="Pending"
+                ).count()
+
+                # Add counts for students who don't have a StudentMilestone entry (default to "Pending")
+                total_student = len(students)
+                students_with_entries = (
+                    StudentMilestone.query.filter_by(milestone_id=milestone_id, project_id=project.id)
+                    .distinct(StudentMilestone.student_id)
+                    .count()
+                )
+                missing_entries_count = total_student - students_with_entries
+
+                # Aggregate stats including the milestone deadline
+                milestone_stats[milestone_title]["completed"] += completed_count
+                milestone_stats[milestone_title]["pending"] += pending_count + missing_entries_count
+                milestone_stats[milestone_title]["deadline"] = milestone_deadline
+
+            # Convert defaultdict to a regular dictionary if needed
+            milestone_stats = dict(milestone_stats)
+
+            # Result Example
+            result = [
+                {
+                    "title": title,
+                    "completed": stats["completed"],
+                    "pending": stats["pending"],
+                    "deadline": stats["deadline"],  # Include deadline in the result
+                }
+                for title, stats in milestone_stats.items()
+            ]
+
+            project_students = StudentProject.query.filter_by(project_id=project.id).all()
+            student_data = [
+                {
+                    "student_email": Student.query.filter_by(id=sp.student_id).first().email,
+                    "github_repo_url": sp.github_repo_url,
+                    "completed_milestones": StudentMilestone.query.filter_by(student_id=sp.student_id, project_id=project.id, status='Completed').count(),
+                    "pending_milestones": StudentMilestone.query.filter_by(student_id=sp.student_id, project_id=project.id, status='Pending').count(),
+                }
+                for sp in project_students
+            ]
+            course_project_data.append({
+                "project_id": project.id,
+                "title": project.title,
+                "students": student_data,
+                "milestone_stats": milestone_stats,
+            })
+        course_data.append({
+            "course_id": course.id,
+            "name": course.name,
+            "projects": course_project_data,
         })
 
-    return jsonify({'project_stats': project_stats_list})
- 
-# API: Student Stats
-@api_routes.route('/api/student_stats', methods=['GET'])
-def student_stats():
-    # Number of students who have completed all milestones in a project
-    completed_students_per_project = []
-
-    projects = Project.query.all()
-    for project in projects:
-        total_milestones = Milestone.query.filter_by(project_id=project.id).count()
-        if total_milestones == 0:
-            continue  # Skip projects with no milestones
-        student_projects = StudentProject.query.filter_by(project_id=project.id).all()
-        students_completed_all = 0
-        for sp in student_projects:
-            completed_milestones = StudentMilestone.query.filter_by(
-                student_id=sp.student_id,
-                project_id=project.id,
-                status='Completed'
-            ).count()
-            if completed_milestones == total_milestones:
-                students_completed_all += 1
-        completed_students_per_project.append({
-            'project_id': project.id,
-            'project_title': project.title,
-            'students_completed_all_milestones': students_completed_all
-        })
-
-    # Simplified: Students who haven't started any milestones
-    not_started_stats = []
-    projects = Project.query.all()
-    for project in projects:
-        student_projects = StudentProject.query.filter_by(project_id=project.id).all()
-        not_started_count = 0
-        for sp in student_projects:
-            milestone_count = StudentMilestone.query.filter_by(
-                student_id=sp.student_id,
-                project_id=project.id
-            ).count()
-            if milestone_count == 0:
-                not_started_count += 1
-        if not_started_count > 0:
-            not_started_stats.append({
-                'project_id': project.id,
-                'students_not_started': not_started_count
-            })
-
-    # Simplified: Students with incomplete reports
-    incomplete_reports_stats = []
-    for project in projects:
-        incomplete_count = StudentProject.query.filter_by(
-            project_id=project.id,
-            project_report=None
-        ).count()
-        if incomplete_count > 0:
-            incomplete_reports_stats.append({
-                'project_id': project.id,
-                'num_incomplete_reports': incomplete_count
-            })
-
-    # Aggregate stats
-    student_stats = {
-        'completed_students_per_project': completed_students_per_project,
-        'students_not_started_milestones': not_started_stats,
-        'incomplete_reports': incomplete_reports_stats
+    # Response structure
+    response = {
+        "overview": {
+            "total_courses": total_courses,
+            "total_projects": total_projects,
+            "total_students": total_students,
+        },
+        "courses": course_data,
     }
-    
-    return jsonify(student_stats)
+    return jsonify(response)
+
+
+

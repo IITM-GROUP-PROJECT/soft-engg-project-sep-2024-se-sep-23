@@ -88,7 +88,7 @@ export default new Router({
     props: true
   },
   {
-    path: '/instructor_stats',
+    path: '/instructor_stats/:instructorId',
     name: 'InstructorStats',
     component: InstructorStats,
     props: true

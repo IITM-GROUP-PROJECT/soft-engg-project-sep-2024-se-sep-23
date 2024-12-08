@@ -79,8 +79,21 @@
           <!-- Student Assignment -->
           <div class="form-section">
             <h3>Assign New Students</h3>
+            <div class="search-container">
+              <input
+                type="text"
+                class="search-bar"
+                placeholder="Search Students..."
+                v-model="searchQuery"
+              />
+              <i class="fas fa-search search-icon"></i>
+            </div>
             <div class="students-grid">
-              <div v-for="student in unassignedStudents" :key="student.id" class="student-item">
+              <div
+                v-for="student in filteredStudents"
+                :key="student.id"
+                class="student-item"
+              >
                 <input
                   type="checkbox"
                   :id="'student-' + student.id"
@@ -113,91 +126,148 @@ export default {
       unassignedStudents: [],
       selectedNewStudents: [],
       selectedCourse: '',
-      newCourseName: '' 
-    }
+      newCourseName: '',
+      searchQuery: '', // Search query for filtering students
+    };
+  },
+  computed: {
+    filteredStudents() {
+      // Dynamically filter unassigned students based on the search query
+      const query = this.searchQuery.toLowerCase();
+      return this.unassignedStudents.filter((student) =>
+        student.email.toLowerCase().includes(query)
+      );
+    },
   },
   async created() {
-    await this.fetchProjectData()
-    await this.fetchCourses()
+    await this.fetchProjectData();
+    await this.fetchCourses();
   },
   methods: {
     async fetchProjectData() {
       try {
-        const response = await fetch(`http://127.0.0.1:5000/api/edit_project/${this.$route.params.projectId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
+        const response = await fetch(
+          `http://127.0.0.1:5000/api/edit_project/${this.$route.params.projectId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
           }
-        })
-        const data = await response.json()
-        this.project = data.project
-        this.selectedCourse = data.project.course_id // Set initial course
-        this.unassignedStudents = data.unassigned_students
+        );
+        const data = await response.json();
+        this.project = data.project;
+        this.selectedCourse = data.project.course_id; // Set initial course
+        this.unassignedStudents = data.unassigned_students;
       } catch (error) {
-        console.error('Error fetching project:', error)
+        console.error('Error fetching project:', error);
       }
     },
     async fetchCourses() {
       try {
         const response = await fetch('http://127.0.0.1:5000/api/courses', {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-        this.courses = await response.json()
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        this.courses = await response.json();
       } catch (error) {
-        console.error('Error fetching courses:', error)
+        console.error('Error fetching courses:', error);
       }
     },
     addMilestone() {
       this.project.milestones.push({
         title: '',
         description: '',
-        deadline: ''
-      })
+        deadline: '',
+      });
     },
     removeMilestone(index) {
-      this.project.milestones.splice(index, 1)
+      this.project.milestones.splice(index, 1);
     },
     async updateProject() {
       try {
-        const response = await fetch(`http://127.0.0.1:5000/api/edit_project/${this.project.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
-            ...this.project,
-            student_ids: [...this.project.assigned_students, ...this.selectedNewStudents],
-            new_course: this.selectedCourse === 'new',
-            course_id: this.selectedCourse === 'new' ? null : this.selectedCourse,
-            course_name: this.selectedCourse === 'new' ? this.newCourseName : null
-          })
-        })
-        
+        const response = await fetch(
+          `http://127.0.0.1:5000/api/edit_project/${this.project.id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({
+              ...this.project,
+              student_ids: [
+                ...this.project.assigned_students,
+                ...this.selectedNewStudents,
+              ],
+              new_course: this.selectedCourse === 'new',
+              course_id:
+                this.selectedCourse === 'new' ? null : this.selectedCourse,
+              course_name:
+                this.selectedCourse === 'new' ? this.newCourseName : null,
+            }),
+          }
+        );
+
         if (response.ok) {
-          alert('Project updated successfully')
-          this.$router.push('/instructor_dashboard')
+          alert('Project updated successfully');
+          this.$router.push('/instructor_dashboard');
         } else {
-          throw new Error('Failed to update project')
+          throw new Error('Failed to update project');
         }
       } catch (error) {
-        console.error('Error updating project:', error)
-        alert('Failed to update project')
+        console.error('Error updating project:', error);
+        alert('Failed to update project');
       }
     },
     logout() {
-      localStorage.removeItem('token')
-      this.$router.push('/')
+      localStorage.removeItem('token');
+      this.$router.push('/');
     },
     goBack() {
       this.$router.push(`/project/${this.project.id}`);
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
+
 <style scoped>
+.search-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 1rem 0;
+}
+
+.search-bar {
+  width: 100%;
+  padding: 12px 45px 12px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 25px;
+  font-size: 14px;
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.search-bar:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 5px rgba(74, 144, 226, 0.3);
+}
+
+.search-bar:hover {
+  border-color: #bdbdbd;
+}
+
+.search-icon {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #757575;
+  font-size: 18px;
+}
 .edit-project {
   min-height: 100vh;
   background-color: #f8f9fa;
